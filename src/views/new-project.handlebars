@@ -1,0 +1,111 @@
+<h2 style="margin:0 0 16px;">New project</h2>
+{{#if collision}}<div class="alert">{{collision.message}}</div>{{/if}}
+
+<form method="post" action="/new" enctype="multipart/form-data">
+  <div class="card">
+    <h2>1. Job</h2>
+    <div class="field">
+      <label for="service">Service</label>
+      <select id="service" name="service" required>
+        <option value="">Select…</option>
+        {{#each services}}
+        <option value="{{value}}">{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+    <div class="field">
+      <label for="city">City</label>
+      <select id="city" name="city" required>
+        <option value="">Select…</option>
+        {{#each cities}}
+        <option value="{{slug}}">{{name}}, IL ({{hub}})</option>
+        {{/each}}
+      </select>
+    </div>
+    <div class="field">
+      <label for="address">Street address (internal, not published)</label>
+      <input id="address" name="address" autocomplete="off" placeholder="e.g. 1234 Maple Ave">
+    </div>
+    <div class="field">
+      <label for="descriptor">Optional descriptor</label>
+      <input id="descriptor" name="descriptor" value="{{formValues.descriptor}}" autocomplete="off" placeholder="colonial, victorian, etc. — only if slug collides">
+      <small>Leave blank unless the URL is already taken.</small>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Details</h2>
+    <div class="field">
+      <label for="home_type">Home type</label>
+      <input id="home_type" name="home_type" placeholder="e.g. Two-story colonial" required>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="metric_value">Primary metric</label>
+        <input id="metric_value" name="metric_value" placeholder="24" required>
+      </div>
+      <div class="field">
+        <label for="metric_label">Unit</label>
+        <input id="metric_label" name="metric_label" placeholder="Windows Cleaned" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="price">Price (internal)</label>
+      <input id="price" name="price" placeholder="$290">
+    </div>
+    <div class="field">
+      <label for="challenge">Notable challenge (optional)</label>
+      <input id="challenge" name="challenge" placeholder="e.g. North-facing windows, salt residue">
+    </div>
+    <div class="field">
+      <label for="review_date">Date completed</label>
+      <input id="review_date" name="review_date" type="date" value="{{today}}" required>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Photos</h2>
+    <div class="field">
+      <label for="before">Before photo</label>
+      <input id="before" name="before" type="file" accept="image/*" capture="environment" required>
+      <small>Resized to 1200×800 .webp on upload.</small>
+    </div>
+    <div class="field">
+      <label for="after">After photo</label>
+      <input id="after" name="after" type="file" accept="image/*" capture="environment" required>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Customer review</h2>
+    <div class="field">
+      <label for="customer_name">Customer name</label>
+      <input id="customer_name" name="customer_name" required>
+    </div>
+    <div class="field">
+      <label for="review_text">Review text (paste exactly)</label>
+      <textarea id="review_text" name="review_text" rows="5" required></textarea>
+      <small>Do not paraphrase — paste the customer's words as written.</small>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>5. What we did</h2>
+    <div class="field">
+      <label for="bullet_facts">Bullet notes (the AI expands these)</label>
+      <textarea id="bullet_facts" name="bullet_facts" rows="6" placeholder="- arrived 9am
+- 24 windows, 2 stories
+- north side had salt residue
+- screens washed and replaced
+- frames and tracks wiped
+- 4 hours total"></textarea>
+    </div>
+    <div class="field">
+      <label for="customer_note">Customer context (optional)</label>
+      <input id="customer_note" name="customer_note" placeholder="e.g. annual client, found us on Google">
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-block">Generate preview</button>
+  <p class="muted" style="margin-top:8px;">Photo upload + AI narrative usually takes 10–20 seconds.</p>
+</form>

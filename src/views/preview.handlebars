@@ -1,0 +1,21 @@
+<h2 style="margin:0 0 12px;">Review &amp; publish</h2>
+<p class="muted">URL: <code>/projects/{{project.slug}}</code></p>
+
+<div class="card">
+  <h2>Narrative — edit if needed</h2>
+  <form method="post" action="/projects/{{project.id}}/narrative">
+    <textarea name="narrative" rows="14" style="font-family:inherit;">{{project.narrative}}</textarea>
+    <button type="submit" class="btn btn-outline" style="margin-top:10px;">Save narrative</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Preview the page</h2>
+  <iframe src="/projects/{{project.id}}/preview/iframe" style="width:100%;height:600px;border:1px solid #cfd8dc;border-radius:8px;"></iframe>
+  <p class="muted" style="margin-top:8px;">Photos will 404 in this preview — they're not uploaded yet. They'll appear once you publish.</p>
+</div>
+
+<form method="post" action="/projects/{{project.id}}/publish">
+  <button type="submit" class="btn btn-block">Publish to mywindowwashing.com</button>
+</form>
+<p class="muted" style="margin-top:8px;">This commits the page, photos, sitemap, and updated spoke page to git, then pushes.</p>

@@ -1,0 +1,21 @@
+<div class="card">
+  <h2>Submit a completed job</h2>
+  <p class="muted">Photos, address, customer review. Takes about 2 minutes.</p>
+  <a class="btn btn-block" href="/new" style="text-align:center;">+ New project</a>
+</div>
+
+<div class="card">
+  <h2>Recently published</h2>
+  {{#if recent.length}}
+  <ul class="list">
+    {{#each recent}}
+    <li>
+      <strong>{{service_label}} — {{city_name}}, IL</strong><br>
+      <span class="muted">/{{slug}} · {{published_at}}</span>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="muted">No projects published yet.</p>
+  {{/if}}
+</div>

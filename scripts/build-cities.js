@@ -29,7 +29,8 @@ if (!SITE) {
   process.exit(1);
 }
 
-const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_KEY = process.env.GOOGLE_GEOCODING_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+const KEY_SOURCE = process.env.GOOGLE_GEOCODING_API_KEY ? 'GOOGLE_GEOCODING_API_KEY' : 'GOOGLE_MAPS_API_KEY';
 
 // All 8 hubs in operation. Phone numbers are kept for reference but
 // hub-of-spoke detection is by link, not phone. parentOrgUrl follows
@@ -226,6 +227,10 @@ async function enrichCoords(items, addressFor, label) {
     await new Promise(r => setTimeout(r, 50));
   }
   console.log(`${label}: ${geocoded} new, ${skipped} kept, ${failed} failed`);
+}
+
+if (GOOGLE_KEY) {
+  console.log(`Geocoding key in use: ${KEY_SOURCE}`);
 }
 
 // ── Scan spoke pages ──────────────────────────────────────────────────

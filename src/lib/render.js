@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import Handlebars from 'handlebars';
 import { getService, getHub, getCity } from './slug.js';
 import { relatedProjects, listPublished } from './db.js';
@@ -144,6 +144,10 @@ function buildView(project, opts = {}) {
     related,
     footerRecent,
     map: buildMap(hub),
+    // The optional extra photos. First one becomes the hero
+    // background, all of them populate the in-page gallery section.
+    gallery:   galleryFilenames(project),
+    heroImage: galleryFilenames(project)[0] || null,
     seo: {
       title:         seoTitle,
       description:   seoDesc,
@@ -215,6 +219,21 @@ function buildMap(hub) {
     src: `https://www.google.com/maps/embed/v1/place?key=${key}&q=${q}`,
     kind: 'embed',
   };
+}
+
+// Returns just the basenames so the template can produce relative
+// `img/...` URLs that work from the /projects/ subfolder.
+function galleryFilenames(project) {
+  if (!project.extra_photos) return [];
+  if (Array.isArray(project.extra_photos)) {
+    return project.extra_photos.map(p => basename(p));
+  }
+  // Fallback: column is a JSON string (happens if a caller forgot to
+  // pass through parseExtras). Try to parse.
+  try {
+    const arr = JSON.parse(project.extra_photos);
+    return Array.isArray(arr) ? arr.map(p => basename(p)) : [];
+  } catch { return []; }
 }
 
 function parseNarrative(raw) {

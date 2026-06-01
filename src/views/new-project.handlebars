@@ -40,13 +40,38 @@
   <div class="card">
     <h2>3. Photos</h2>
     <div class="field">
-      <label for="before">Before photo</label>
+      <label for="before">Before photo <small style="color:#c62828;">(required)</small></label>
       <input id="before" name="before" type="file" accept="image/*" capture="environment" required>
       <small>Resized to 1200×800 .webp on upload.</small>
     </div>
     <div class="field">
-      <label for="after">After photo</label>
+      <label for="after">After photo <small style="color:#c62828;">(required)</small></label>
       <input id="after" name="after" type="file" accept="image/*" capture="environment" required>
+    </div>
+
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid #e0e8f0;">
+      <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 4px;">Additional photos <small style="color:#8a9db0;font-weight:400;">(optional, up to 5)</small></p>
+      <p style="font-size:12px;color:#8a9db0;margin:0 0 12px;">The first one becomes the hero image. All show in a "Project Photos" gallery on the published page.</p>
+      <div class="field">
+        <label for="extra-1">Photo 1</label>
+        <input id="extra-1" name="extras" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="field">
+        <label for="extra-2">Photo 2</label>
+        <input id="extra-2" name="extras" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="field">
+        <label for="extra-3">Photo 3</label>
+        <input id="extra-3" name="extras" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="field">
+        <label for="extra-4">Photo 4</label>
+        <input id="extra-4" name="extras" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="field">
+        <label for="extra-5">Photo 5</label>
+        <input id="extra-5" name="extras" type="file" accept="image/*" capture="environment">
+      </div>
     </div>
   </div>
 

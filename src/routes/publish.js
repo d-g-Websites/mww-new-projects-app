@@ -40,6 +40,18 @@ export async function publishProject(project) {
     copyFileSync(project.after_photo, afterDest);
   }
 
+  // Plus any optional gallery photos. Stored as an array of staged
+  // paths; copy each to projects/img/ under the same basename.
+  const extraDests = [];
+  const extraPaths = Array.isArray(project.extra_photos) ? project.extra_photos : [];
+  for (const p of extraPaths) {
+    if (p && existsSync(p)) {
+      const dest = join(imgDir, basename(p));
+      copyFileSync(p, dest);
+      extraDests.push(dest);
+    }
+  }
+
   // 3. Patch the matching spoke page.
   const spokeResult = updateSpokePage(siteRepo, project.city_slug, project);
   const spokePath = join(siteRepo, `${project.city_slug}.html`);
@@ -55,6 +67,7 @@ export async function publishProject(project) {
     relTo(siteRepo, beforeDest),
     relTo(siteRepo, afterDest),
     relTo(siteRepo, sitemapPath),
+    ...extraDests.map(d => relTo(siteRepo, d)),
   ];
   if (!spokeResult.skipped) files.push(relTo(siteRepo, spokePath));
 

@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality } from '../lib/slug.js';
 import { insertDraft, updateDraft, getProject, listPublished } from '../lib/db.js';
-import { processBeforeAfter } from '../lib/photos.js';
+import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
 import { renderProjectHtml } from '../lib/render.js';
 import { publishProject } from './publish.js';
@@ -76,7 +76,11 @@ function collectExtras(serviceValue, b) {
 // ── Submit form: validate, save photos, save draft, generate narrative,
 //    show preview ─────────────────────────────────────────────────────
 router.post('/new',
-  upload.fields([{ name: 'before', maxCount: 1 }, { name: 'after', maxCount: 1 }]),
+  upload.fields([
+    { name: 'before', maxCount: 1 },
+    { name: 'after',  maxCount: 1 },
+    { name: 'extras', maxCount: 5 },
+  ]),
   async (req, res, next) => {
     try {
       const b = req.body;
@@ -134,6 +138,17 @@ router.post('/new',
         outDir: stagedDir,
       });
 
+      // Optional: up to 5 additional photos for the in-page gallery
+      // and the hero background. Empty input slots are silently
+      // skipped — no required count.
+      const extraUploads = req.files?.extras || [];
+      const extraOuts = await processExtras({
+        files: extraUploads,
+        slug,
+        outDir: stagedDir,
+        max: 5,
+      });
+
       const extras = collectExtras(service.value, b);
 
       // Generate narrative via Claude.
@@ -169,6 +184,7 @@ router.post('/new',
         before_photo: beforeOut,
         after_photo:  afterOut,
         extras,
+        extra_photos: extraOuts,
       });
 
       res.redirect(`/projects/${id}/preview`);

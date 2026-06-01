@@ -52,6 +52,7 @@ function ensureColumn(name, decl) {
   }
 }
 ensureColumn('extras', 'TEXT');
+ensureColumn('extra_photos', 'TEXT');  // JSON array of full webp paths under tmp/staged
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -59,33 +60,38 @@ export function insertDraft(row) {
   const extras = row.extras && typeof row.extras === 'object'
     ? JSON.stringify(row.extras)
     : (row.extras || null);
+  const extraPhotos = Array.isArray(row.extra_photos)
+    ? JSON.stringify(row.extra_photos)
+    : (row.extra_photos || null);
   const stmt = db.prepare(`
     INSERT INTO projects (
       slug, service, service_label, city_slug, city_name, hub,
       address, home_type, metric_value, metric_label, price, challenge,
       review_text, customer_name, review_date,
-      narrative, before_photo, after_photo, extras
+      narrative, before_photo, after_photo, extras, extra_photos
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date,
-      @narrative, @before_photo, @after_photo, @extras
+      @narrative, @before_photo, @after_photo, @extras, @extra_photos
     )
   `);
-  const info = stmt.run({ ...row, extras });
+  const info = stmt.run({ ...row, extras, extra_photos: extraPhotos });
   return info.lastInsertRowid;
 }
 
-// Parse extras JSON back to an object on read. Returns {} when missing
-// so callers can do `project.extras.serviceType` without null checks.
+// Parse JSON columns back to objects on read. Returns {} / [] when
+// missing so callers can dereference without null checks.
 export function parseExtras(row) {
   if (!row) return row;
-  if (!row.extras) return { ...row, extras: {} };
-  try {
-    return { ...row, extras: JSON.parse(row.extras) };
-  } catch {
-    return { ...row, extras: {} };
-  }
+  const out = { ...row };
+  out.extras = row.extras ? safeParse(row.extras, {}) : {};
+  out.extra_photos = row.extra_photos ? safeParse(row.extra_photos, []) : [];
+  return out;
+}
+
+function safeParse(s, fallback) {
+  try { return JSON.parse(s); } catch { return fallback; }
 }
 
 export function updateDraft(id, patch) {

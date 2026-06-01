@@ -29,3 +29,20 @@ export async function processBeforeAfter({ before, after, slug, outDir }) {
   await Promise.allSettled([unlink(before), unlink(after)]);
   return { beforeOut, afterOut };
 }
+
+// Process up to N optional additional photos in parallel. Each gets a
+// stable filename based on its slot index so the project page can
+// reference them deterministically. Empty / missing slots are skipped.
+// Returns the list of full output paths in submission order.
+export async function processExtras({ files, slug, outDir, max = 5 }) {
+  if (!files || files.length === 0) return [];
+  const real = files.filter(f => f && f.size > 0).slice(0, max);
+  const outs = [];
+  for (let i = 0; i < real.length; i++) {
+    const out = join(outDir, `${slug}-extra-${i + 1}.webp`);
+    await resizeToWebp(real[i].path, out);
+    await unlink(real[i].path).catch(() => {});
+    outs.push(out);
+  }
+  return outs;
+}

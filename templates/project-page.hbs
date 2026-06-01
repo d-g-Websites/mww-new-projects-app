@@ -91,8 +91,10 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .lp-breadcrumb-inner span { color: #595959; font-weight: 500; }
 
 /* ── PROJECT HERO ── */
-.proj-hero { background: #0d2035; padding: 52px 20px 44px; position: relative; overflow: hidden; }
+.proj-hero { background: #0d2035 center / cover no-repeat; padding: 52px 20px 44px; position: relative; overflow: hidden; }
+.proj-hero.has-bg { padding: 80px 20px 64px; }
 .proj-hero-overlay { position: absolute; inset: 0; background: rgba(13,32,53,.85); z-index: 0; }
+.proj-hero.has-bg .proj-hero-overlay { background: linear-gradient(180deg, rgba(13,32,53,.72) 0%, rgba(13,32,53,.88) 100%); }
 .proj-hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
 .proj-hooks { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .proj-hook { background: rgba(76,175,80,.18); border: 1px solid rgba(76,175,80,.35); color: #81c784; font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 20px; letter-spacing: .3px; text-transform: uppercase; }
@@ -119,6 +121,17 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-section-label svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; }
 .proj-section-title { color: #133047; font-size: 26px; font-weight: 700; margin: 0 0 8px; line-height: 1.25; }
 .proj-section-sub { color: #595959; font-size: 16px; margin: 0 0 36px; }
+
+/* ── PHOTO GALLERY ── */
+.proj-gallery { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
+.proj-gallery a { display: block; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(19,48,71,.10); aspect-ratio: 3 / 2; transition: transform .15s, box-shadow .15s; }
+.proj-gallery a:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(19,48,71,.18); }
+.proj-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (min-width: 768px) {
+  .proj-gallery.count-3 { grid-template-columns: repeat(3, 1fr); }
+  .proj-gallery.count-4 { grid-template-columns: repeat(4, 1fr); }
+  .proj-gallery.count-5 { grid-template-columns: repeat(5, 1fr); }
+}
 
 /* ── BEFORE / AFTER ── */
 .before-after-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -316,7 +329,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 </nav>
 
 <!-- ═══ PROJECT HERO ═══ -->
-<div class="proj-hero">
+<div class="proj-hero{{#if heroImage}} has-bg{{/if}}"{{#if heroImage}} style="background-image:url('img/{{heroImage}}');"{{/if}}>
   <div class="proj-hero-overlay"></div>
   <div class="proj-hero-inner">
     <div>
@@ -389,6 +402,23 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
     </div>
   </div>
 </div>
+
+{{#if gallery.length}}
+<!-- ═══ PHOTO GALLERY ═══ -->
+<div class="proj-section" style="background:#f5f8fa;padding-top:40px;padding-bottom:40px;">
+  <div class="proj-section-inner">
+    <div class="proj-section-label"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Project Photos</div>
+    <h2 class="proj-section-title" style="margin-bottom:24px;">More From This Job</h2>
+    <div class="proj-gallery count-{{gallery.length}}">
+      {{#each gallery}}
+      <a href="img/{{this}}" target="_blank" rel="noopener">
+        <img src="img/{{this}}" alt="{{../service.label}} project — {{../city.name}}, IL" loading="lazy">
+      </a>
+      {{/each}}
+    </div>
+  </div>
+</div>
+{{/if}}
 
 <!-- ═══ PROJECT NARRATIVE ═══ -->
 <div class="proj-section" style="background:#f5f8fa;">

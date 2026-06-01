@@ -1,0 +1,8 @@
+<label class="check-row has-count {{#if (lookup formValues name)}}is-checked{{/if}}">
+  <input type="checkbox" name="{{name}}" value="yes" {{#if (lookup formValues name)}}checked{{/if}}>
+  <span>{{label}} <small style="color:#8a9db0;">(if any)</small></span>
+  <span class="count-input">
+    <input type="number" min="0" name="{{name}}_count" placeholder="How many?"
+           value="{{lookup formValues (concat name '_count')}}">
+  </span>
+</label>

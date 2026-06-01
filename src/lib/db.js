@@ -30,6 +30,7 @@ db.exec(`
     narrative       TEXT,                  -- full HTML/text of 2 paragraphs
     before_photo    TEXT,                  -- relative path under projects/img/
     after_photo     TEXT,
+    extras          TEXT,                  -- service-specific JSON (window types, screen counts, etc.)
     status          TEXT NOT NULL DEFAULT 'draft', -- draft | published
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     published_at    TEXT
@@ -43,22 +44,48 @@ db.exec(`
     ON projects(service);
 `);
 
+// Idempotent migrations for installs that predate later columns.
+function ensureColumn(name, decl) {
+  const cols = db.prepare('PRAGMA table_info(projects)').all().map(c => c.name);
+  if (!cols.includes(name)) {
+    db.exec(`ALTER TABLE projects ADD COLUMN ${name} ${decl}`);
+  }
+}
+ensureColumn('extras', 'TEXT');
+
 export function insertDraft(row) {
+  // extras can come in as a plain object — JSON-stringify here so callers
+  // don't have to remember.
+  const extras = row.extras && typeof row.extras === 'object'
+    ? JSON.stringify(row.extras)
+    : (row.extras || null);
   const stmt = db.prepare(`
     INSERT INTO projects (
       slug, service, service_label, city_slug, city_name, hub,
       address, home_type, metric_value, metric_label, price, challenge,
       review_text, customer_name, review_date,
-      narrative, before_photo, after_photo
+      narrative, before_photo, after_photo, extras
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date,
-      @narrative, @before_photo, @after_photo
+      @narrative, @before_photo, @after_photo, @extras
     )
   `);
-  const info = stmt.run(row);
+  const info = stmt.run({ ...row, extras });
   return info.lastInsertRowid;
+}
+
+// Parse extras JSON back to an object on read. Returns {} when missing
+// so callers can do `project.extras.serviceType` without null checks.
+export function parseExtras(row) {
+  if (!row) return row;
+  if (!row.extras) return { ...row, extras: {} };
+  try {
+    return { ...row, extras: JSON.parse(row.extras) };
+  } catch {
+    return { ...row, extras: {} };
+  }
 }
 
 export function updateDraft(id, patch) {
@@ -69,11 +96,11 @@ export function updateDraft(id, patch) {
 }
 
 export function getProject(id) {
-  return db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+  return parseExtras(db.prepare('SELECT * FROM projects WHERE id = ?').get(id));
 }
 
 export function getProjectBySlug(slug) {
-  return db.prepare('SELECT * FROM projects WHERE slug = ?').get(slug);
+  return parseExtras(db.prepare('SELECT * FROM projects WHERE slug = ?').get(slug));
 }
 
 export function markPublished(id) {

@@ -32,16 +32,46 @@ router.get('/new', (req, res) => {
   res.render('pick-service', { services: SERVICES });
 });
 
+// Maps service.value → the Details-section partial to render. Services
+// without a tailored partial fall back to the generic one — keeps
+// gutter + power working unchanged until they get their own.
+const DETAILS_PARTIALS = {
+  'window-cleaning': 'details-window-cleaning',
+  'gutter-cleaning': 'details-generic',
+  'power-washing':   'details-generic',
+};
+
 // ── Step 2: fill in the actual details for the chosen service. ──
 router.get('/new/details', (req, res) => {
   const service = getService(req.query.service);
   if (!service) return res.redirect('/new');
   res.render('new-project', {
     service,
+    detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
     today: new Date().toISOString().slice(0, 10),
     googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
   });
 });
+
+// Pulls service-specific fields out of the form body and packs them
+// into a single `extras` object that gets JSON-serialized to the DB.
+// Keep this in lock-step with the partials in src/views/partials/.
+function collectExtras(serviceValue, b) {
+  if (serviceValue === 'window-cleaning') {
+    const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
+    const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
+    return {
+      serviceType:  b.service_type || null,
+      windowTypes:  arr(b.window_types),
+      screens:       b.screens        ? intOrNull(b.screens_count)        : null,
+      stormWindows:  b.storm_windows  ? intOrNull(b.storm_windows_count)  : null,
+      skylights:     b.skylights      ? intOrNull(b.skylights_count)      : null,
+      windowWells:   b.window_wells   ? intOrNull(b.window_wells_count)   : null,
+      tracksFrames:  !!b.tracks_frames,
+    };
+  }
+  return {};
+}
 
 // ── Submit form: validate, save photos, save draft, generate narrative,
 //    show preview ─────────────────────────────────────────────────────
@@ -78,6 +108,7 @@ router.post('/new',
       if (!isSlugAvailable(slug, siteRepo)) {
         return res.status(409).render('new-project', {
           service,
+          detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
           today: b.review_date,
           formValues: b,
           googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -103,6 +134,8 @@ router.post('/new',
         outDir: stagedDir,
       });
 
+      const extras = collectExtras(service.value, b);
+
       // Generate narrative via Claude.
       const paragraphs = await generateNarrative({
         service: service.label,
@@ -112,6 +145,7 @@ router.post('/new',
         challenge: b.challenge,
         bulletFacts: b.bullet_facts,
         customerNote: b.customer_note,
+        extras,
       });
       const narrative = paragraphs.join('\n\n');
 
@@ -134,6 +168,7 @@ router.post('/new',
         narrative,
         before_photo: beforeOut,
         after_photo:  afterOut,
+        extras,
       });
 
       res.redirect(`/projects/${id}/preview`);

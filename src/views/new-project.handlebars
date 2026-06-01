@@ -35,35 +35,7 @@
     {{/if}}
   </div>
 
-  <div class="card">
-    <h2>2. Details</h2>
-    <div class="field">
-      <label for="home_type">Home type</label>
-      <input id="home_type" name="home_type" value="{{formValues.home_type}}" placeholder="e.g. Two-story colonial" required>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label for="metric_value">Primary metric</label>
-        <input id="metric_value" name="metric_value" value="{{formValues.metric_value}}" placeholder="24" required>
-      </div>
-      <div class="field">
-        <label for="metric_label">Unit</label>
-        <input id="metric_label" name="metric_label" value="{{formValues.metric_label}}" placeholder="Windows Cleaned" required>
-      </div>
-    </div>
-    <div class="field">
-      <label for="price">Price (internal)</label>
-      <input id="price" name="price" value="{{formValues.price}}" placeholder="$290">
-    </div>
-    <div class="field">
-      <label for="challenge">Notable challenge (optional)</label>
-      <input id="challenge" name="challenge" value="{{formValues.challenge}}" placeholder="e.g. North-facing windows, salt residue">
-    </div>
-    <div class="field">
-      <label for="review_date">Date completed</label>
-      <input id="review_date" name="review_date" type="date" value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
-    </div>
-  </div>
+  {{> (lookup . 'detailsPartial')}}
 
   <div class="card">
     <h2>3. Photos</h2>

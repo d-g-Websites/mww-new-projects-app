@@ -40,6 +40,7 @@ export async function generateNarrative({
   challenge,       // free-text from tech
   bulletFacts,     // free-text dump of what tech entered
   customerNote,    // optional, e.g. "annual client"
+  extras,          // service-specific structured fields (window types, screens, etc.)
 }) {
   const userPrompt = `Job facts:
 - Service: ${service}
@@ -48,7 +49,7 @@ export async function generateNarrative({
 - Primary metric: ${metric || 'not specified'}
 - Notable challenge: ${challenge || 'none mentioned'}
 - Customer context: ${customerNote || 'none mentioned'}
-
+${formatExtras(extras)}
 Technician's notes (raw):
 """
 ${bulletFacts || '(none)'}
@@ -76,4 +77,21 @@ Write the two paragraphs now, following the rules in the system prompt.`;
   // Split into 2 paragraphs for the template.
   const paragraphs = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   return paragraphs;
+}
+
+// Turn the service-specific extras object into a few bullet lines the
+// model can ground on. Skips empty fields so the prompt stays tight.
+function formatExtras(extras) {
+  if (!extras || typeof extras !== 'object') return '';
+  const lines = [];
+  if (extras.serviceType) lines.push(`- Service type: ${extras.serviceType}`);
+  if (Array.isArray(extras.windowTypes) && extras.windowTypes.length) {
+    lines.push(`- Window types present: ${extras.windowTypes.join(', ')}`);
+  }
+  if (extras.screens)      lines.push(`- Screens washed: ${extras.screens}`);
+  if (extras.stormWindows) lines.push(`- Storm windows cleaned: ${extras.stormWindows}`);
+  if (extras.skylights)    lines.push(`- Skylights cleaned: ${extras.skylights}`);
+  if (extras.windowWells)  lines.push(`- Window wells cleaned: ${extras.windowWells}`);
+  if (extras.tracksFrames) lines.push(`- Tracks and frames wiped down`);
+  return lines.length ? '\nExtras:\n' + lines.join('\n') + '\n' : '';
 }

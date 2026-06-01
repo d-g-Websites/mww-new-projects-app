@@ -18,6 +18,22 @@ app.engine('handlebars', engine({
   defaultLayout: 'main',
   layoutsDir: join(__dirname, 'views', 'layouts'),
   partialsDir: join(__dirname, 'views', 'partials'),
+  helpers: {
+    // Sub-expression helpers used by the service-specific form partials.
+    eq:  (a, b) => a === b,
+    concat: function () {
+      // Last arg is the Handlebars options object — drop it.
+      return Array.prototype.slice.call(arguments, 0, -1).join('');
+    },
+    // Accept either an array (multi-checkbox) or a single string
+    // (re-submitted single checkbox value) so the form re-renders
+    // correctly on collision.
+    includes: (haystack, needle) => {
+      if (!haystack) return false;
+      if (Array.isArray(haystack)) return haystack.includes(needle);
+      return haystack === needle;
+    },
+  },
 }));
 app.set('view engine', 'handlebars');
 app.set('views', join(__dirname, 'views'));

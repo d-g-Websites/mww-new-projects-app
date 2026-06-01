@@ -4,7 +4,18 @@ import simpleGit from 'simple-git';
 // cPanel pulls from that branch on its own schedule (or via a webhook
 // the user wires up separately).
 export async function commitAndPush({ siteRepoPath, branch, files, message, push }) {
-  const git = simpleGit(siteRepoPath);
+  const author = process.env.GIT_AUTHOR_NAME || 'MWW Dashboard';
+  const email  = process.env.GIT_AUTHOR_EMAIL || 'dashboard@mywindowwashing.com';
+
+  // Inject committer + author identity via env so we don't depend on
+  // the static-site repo's local git config being set. The simple-git
+  // wrapper threads these into every child process it spawns.
+  const git = simpleGit(siteRepoPath, {
+    config: [
+      `user.name=${author}`,
+      `user.email=${email}`,
+    ],
+  });
 
   // Make sure we're on the expected branch.
   const status = await git.status();
@@ -13,8 +24,6 @@ export async function commitAndPush({ siteRepoPath, branch, files, message, push
   }
 
   await git.add(files);
-  const author = process.env.GIT_AUTHOR_NAME || 'MWW Dashboard';
-  const email  = process.env.GIT_AUTHOR_EMAIL || 'dashboard@mywindowwashing.com';
   const commit = await git.commit(message, undefined, {
     '--author': `${author} <${email}>`,
   });

@@ -3,7 +3,7 @@ import { join, basename } from 'node:path';
 import { writeProjectPage } from '../lib/render.js';
 import { updateSpokePage } from '../lib/spoke-update.js';
 import { updateSitemap } from '../lib/sitemap.js';
-import { commitAndPush } from '../lib/git.js';
+import { commitAndPush, syncSiteRepo } from '../lib/git.js';
 import { markPublished } from '../lib/db.js';
 
 // Run the four side-effects in order:
@@ -18,6 +18,11 @@ export async function publishProject(project) {
   const branch   = process.env.SITE_REPO_BRANCH || 'master';
   const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
   if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  // 0. Sync the local clone to origin so spoke + sitemap patches are
+  //    based on the latest published state, not whatever's been
+  //    sitting on the VPS since last publish.
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
 
   const imgDir = join(siteRepo, 'projects', 'img');
   mkdirSync(imgDir, { recursive: true });

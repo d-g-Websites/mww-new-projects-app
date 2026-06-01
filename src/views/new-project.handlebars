@@ -1,65 +1,65 @@
-<h2 style="margin:0 0 16px;">New project</h2>
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 16px;">
+  <h2 style="margin:0;">{{service.label}}</h2>
+  <a href="/new" class="muted" style="font-size:13px;">change</a>
+</div>
 {{#if collision}}<div class="alert">{{collision.message}}</div>{{/if}}
 
-<form method="post" action="/new" enctype="multipart/form-data">
+<form method="post" action="/new" enctype="multipart/form-data" id="project-form">
+  <input type="hidden" name="service" value="{{service.value}}">
+
   <div class="card">
-    <h2>1. Job</h2>
+    <h2>1. Address</h2>
     <div class="field">
-      <label for="service">Service</label>
-      <select id="service" name="service" required>
-        <option value="">Select…</option>
-        {{#each services}}
-        <option value="{{value}}">{{label}}</option>
-        {{/each}}
-      </select>
+      <label for="address-search">Job address</label>
+      <input id="address-search" type="text" placeholder="Start typing the customer's address…" autocomplete="off" required>
+      <small id="address-help">We'll pull the city automatically.</small>
     </div>
-    <div class="field">
-      <label for="city">City</label>
-      <select id="city" name="city" required>
-        <option value="">Select…</option>
-        {{#each cities}}
-        <option value="{{slug}}">{{name}}, IL ({{hub}})</option>
-        {{/each}}
-      </select>
+    <div id="address-resolved" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20;padding:10px 12px;border-radius:8px;font-size:14px;margin-top:4px;">
+      <strong id="resolved-line">—</strong>
     </div>
-    <div class="field">
-      <label for="address">Street address (internal, not published)</label>
-      <input id="address" name="address" autocomplete="off" placeholder="e.g. 1234 Maple Ave">
+    <input type="hidden" name="address" id="address-formatted" value="{{formValues.address}}">
+    <input type="hidden" name="city"    id="address-city"      value="{{formValues.city}}">
+    <input type="hidden" name="state"   id="address-state"     value="{{formValues.state}}">
+    <input type="hidden" name="zip"     id="address-zip"       value="{{formValues.zip}}">
+    <input type="hidden" name="place_id" id="address-place-id" value="{{formValues.place_id}}">
+
+    {{#if collision}}
+    <div class="field" style="margin-top:14px;">
+      <label for="descriptor">URL descriptor (slug "{{collision.slug}}" is taken)</label>
+      <input id="descriptor" name="descriptor" value="{{formValues.descriptor}}" autocomplete="off" placeholder="colonial, victorian, etc.">
     </div>
-    <div class="field">
-      <label for="descriptor">Optional descriptor</label>
-      <input id="descriptor" name="descriptor" value="{{formValues.descriptor}}" autocomplete="off" placeholder="colonial, victorian, etc. — only if slug collides">
-      <small>Leave blank unless the URL is already taken.</small>
-    </div>
+    {{else}}
+    <input type="hidden" name="descriptor" value="">
+    {{/if}}
   </div>
 
   <div class="card">
     <h2>2. Details</h2>
     <div class="field">
       <label for="home_type">Home type</label>
-      <input id="home_type" name="home_type" placeholder="e.g. Two-story colonial" required>
+      <input id="home_type" name="home_type" value="{{formValues.home_type}}" placeholder="e.g. Two-story colonial" required>
     </div>
     <div class="row">
       <div class="field">
         <label for="metric_value">Primary metric</label>
-        <input id="metric_value" name="metric_value" placeholder="24" required>
+        <input id="metric_value" name="metric_value" value="{{formValues.metric_value}}" placeholder="24" required>
       </div>
       <div class="field">
         <label for="metric_label">Unit</label>
-        <input id="metric_label" name="metric_label" placeholder="Windows Cleaned" required>
+        <input id="metric_label" name="metric_label" value="{{formValues.metric_label}}" placeholder="Windows Cleaned" required>
       </div>
     </div>
     <div class="field">
       <label for="price">Price (internal)</label>
-      <input id="price" name="price" placeholder="$290">
+      <input id="price" name="price" value="{{formValues.price}}" placeholder="$290">
     </div>
     <div class="field">
       <label for="challenge">Notable challenge (optional)</label>
-      <input id="challenge" name="challenge" placeholder="e.g. North-facing windows, salt residue">
+      <input id="challenge" name="challenge" value="{{formValues.challenge}}" placeholder="e.g. North-facing windows, salt residue">
     </div>
     <div class="field">
       <label for="review_date">Date completed</label>
-      <input id="review_date" name="review_date" type="date" value="{{today}}" required>
+      <input id="review_date" name="review_date" type="date" value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
     </div>
   </div>
 
@@ -80,11 +80,11 @@
     <h2>4. Customer review</h2>
     <div class="field">
       <label for="customer_name">Customer name</label>
-      <input id="customer_name" name="customer_name" required>
+      <input id="customer_name" name="customer_name" value="{{formValues.customer_name}}" required>
     </div>
     <div class="field">
       <label for="review_text">Review text (paste exactly)</label>
-      <textarea id="review_text" name="review_text" rows="5" required></textarea>
+      <textarea id="review_text" name="review_text" rows="5" required>{{formValues.review_text}}</textarea>
       <small>Do not paraphrase — paste the customer's words as written.</small>
     </div>
   </div>
@@ -98,14 +98,113 @@
 - north side had salt residue
 - screens washed and replaced
 - frames and tracks wiped
-- 4 hours total"></textarea>
+- 4 hours total">{{formValues.bullet_facts}}</textarea>
     </div>
     <div class="field">
       <label for="customer_note">Customer context (optional)</label>
-      <input id="customer_note" name="customer_note" placeholder="e.g. annual client, found us on Google">
+      <input id="customer_note" name="customer_note" value="{{formValues.customer_note}}" placeholder="e.g. annual client, found us on Google">
     </div>
   </div>
 
-  <button type="submit" class="btn btn-block">Generate preview</button>
+  <button type="submit" class="btn btn-block" id="submit-btn" disabled>Pick an address first</button>
   <p class="muted" style="margin-top:8px;">Photo upload + AI narrative usually takes 10–20 seconds.</p>
 </form>
+
+{{#if googleMapsKey}}
+<script>
+  // Toggles the submit button + the green "resolved" pill once a real
+  // place is picked. Prevents techs from submitting a freeform string
+  // that we can't extract a city from.
+  function setResolved(addr, city, state, zip) {
+    var pill = document.getElementById('address-resolved');
+    var line = document.getElementById('resolved-line');
+    var btn = document.getElementById('submit-btn');
+    if (addr && city) {
+      pill.style.display = 'block';
+      line.textContent = addr;
+      btn.disabled = false;
+      btn.textContent = 'Generate preview';
+    } else {
+      pill.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Pick an address first';
+    }
+  }
+  function initAutocomplete() {
+    var input = document.getElementById('address-search');
+    var ac = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: 'us' },
+      fields: ['address_components', 'formatted_address', 'place_id'],
+    });
+    ac.addListener('place_changed', function () {
+      var place = ac.getPlace();
+      if (!place.address_components) return;
+      var city = '', state = '', zip = '';
+      for (var i = 0; i < place.address_components.length; i++) {
+        var c = place.address_components[i];
+        if (c.types.indexOf('locality') !== -1) city = c.long_name;
+        else if (!city && c.types.indexOf('sublocality') !== -1) city = c.long_name;
+        else if (c.types.indexOf('administrative_area_level_1') !== -1) state = c.short_name;
+        else if (c.types.indexOf('postal_code') !== -1) zip = c.long_name;
+      }
+      document.getElementById('address-formatted').value = place.formatted_address || '';
+      document.getElementById('address-city').value = city;
+      document.getElementById('address-state').value = state;
+      document.getElementById('address-zip').value = zip;
+      document.getElementById('address-place-id').value = place.place_id || '';
+      setResolved(place.formatted_address, city, state, zip);
+    });
+    // If the user retypes after selecting, invalidate the resolved state
+    // so they have to pick from the dropdown again.
+    input.addEventListener('input', function () {
+      if (document.getElementById('address-formatted').value &&
+          input.value !== document.getElementById('address-formatted').value) {
+        document.getElementById('address-formatted').value = '';
+        document.getElementById('address-city').value = '';
+        setResolved('', '');
+      }
+    });
+    // Restore on collision re-render
+    if (document.getElementById('address-formatted').value &&
+        document.getElementById('address-city').value) {
+      input.value = document.getElementById('address-formatted').value;
+      setResolved(
+        document.getElementById('address-formatted').value,
+        document.getElementById('address-city').value
+      );
+    }
+  }
+  window.gm_authFailure = function () {
+    var help = document.getElementById('address-help');
+    if (help) {
+      help.textContent = 'Google Maps could not load — check API key + billing in .env.';
+      help.style.color = '#c62828';
+    }
+  };
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{googleMapsKey}}&libraries=places&callback=initAutocomplete&loading=async"></script>
+{{else}}
+<script>
+  // No API key configured — let the form submit as-is using a manual
+  // city input fallback. This shouldn't happen in production but keeps
+  // dev usable.
+  document.addEventListener('DOMContentLoaded', function () {
+    var help = document.getElementById('address-help');
+    help.innerHTML = 'GOOGLE_MAPS_API_KEY not set — type the city manually below.';
+    help.style.color = '#c62828';
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'Generate preview';
+    // Add a manual city input as a fallback
+    var manual = document.createElement('div');
+    manual.className = 'field';
+    manual.innerHTML = '<label for="manual-city">City (manual)</label><input id="manual-city" placeholder="e.g. Northbrook">';
+    document.getElementById('address-help').parentNode.appendChild(manual);
+    document.getElementById('manual-city').addEventListener('input', function (e) {
+      document.getElementById('address-city').value = e.target.value;
+      document.getElementById('address-formatted').value = document.getElementById('address-search').value;
+    });
+  });
+</script>
+{{/if}}

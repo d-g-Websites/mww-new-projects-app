@@ -3,7 +3,7 @@ import multer from 'multer';
 import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
-import { SERVICES, loadCities, getService, getCity, buildSlug, isSlugAvailable } from '../lib/slug.js';
+import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality } from '../lib/slug.js';
 import { insertDraft, updateDraft, getProject, listPublished } from '../lib/db.js';
 import { processBeforeAfter } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
@@ -27,13 +27,19 @@ router.get('/', (req, res) => {
   res.render('index', { recent });
 });
 
-// ── New project form ──
+// ── Step 1 of new-project flow: pick a service. ──
 router.get('/new', (req, res) => {
-  const cities = loadCities();
+  res.render('pick-service', { services: SERVICES });
+});
+
+// ── Step 2: fill in the actual details for the chosen service. ──
+router.get('/new/details', (req, res) => {
+  const service = getService(req.query.service);
+  if (!service) return res.redirect('/new');
   res.render('new-project', {
-    services: SERVICES,
-    cities: cities.cities,
+    service,
     today: new Date().toISOString().slice(0, 10),
+    googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
   });
 });
 
@@ -45,9 +51,18 @@ router.post('/new',
     try {
       const b = req.body;
       const service = getService(b.service);
-      const city    = getCity(b.city);
-      if (!service || !city) {
-        return res.status(400).render('error', { message: 'Pick a valid service and city.' });
+      if (!service) {
+        return res.status(400).render('error', { message: 'Pick a valid service.' });
+      }
+      // City comes from the Google Places locality we extracted client-
+      // side. resolveCityFromLocality falls back to Northbrook if the
+      // city doesn't have an existing spoke page — we'll revisit hub
+      // determination in a follow-up.
+      const city = resolveCityFromLocality(b.city);
+      if (!city) {
+        return res.status(400).render('error', {
+          message: 'Pick a valid street address — we need the city to build the project page.',
+        });
       }
 
       const slug = buildSlug({
@@ -60,10 +75,10 @@ router.post('/new',
       const siteRepo = process.env.SITE_REPO_PATH;
       if (!isSlugAvailable(slug, siteRepo)) {
         return res.status(409).render('new-project', {
-          services: SERVICES,
-          cities: loadCities().cities,
+          service,
           today: b.review_date,
           formValues: b,
+          googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
           collision: {
             slug,
             message: `A page already exists for "${slug}". Add a one-word descriptor (e.g. "colonial") and try again.`,

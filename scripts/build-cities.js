@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// Scan the static-site repo's spoke pages, look at which hub phone they
-// use, geocode each spoke + hub, and write data/cities.json.
+// Scan the static-site repo's spoke pages, look at which hub each
+// spoke links to (`href="hubname"`), geocode each spoke + hub, and
+// write data/cities.json.
 //
-// Idempotent: re-running merges into the existing cities.json so manual
-// edits (city → hub overrides, lat/lng tweaks) are preserved. Only
-// missing fields are filled.
+// Hub detection is link-based, not phone-based: some hubs (Lisle +
+// Bloomingdale) share a phone number, but every spoke page has a
+// "Served by Our X Office" link to exactly one hub. The link wins.
 //
-// Geocoding step runs only if GOOGLE_MAPS_API_KEY is set in .env and
-// the "Geocoding API" is enabled in Google Cloud. Without a key, the
-// script still emits a usable cities.json but without lat/lng — the
-// nearest-city fallback will then have nothing to work with.
+// Idempotent: re-running merges into the existing cities.json so
+// lat/lng + gbpEmbedUrl manual edits survive. hub assignment is always
+// taken fresh from the scan, since the link detection is authoritative.
+//
+// Geocoding runs only if GOOGLE_MAPS_API_KEY is set and the "Geocoding
+// API" is enabled in Google Cloud. Without it, the nearest-spoke
+// fallback won't have lat/lng to compare against.
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -27,12 +31,89 @@ if (!SITE) {
 
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 
-// SOP-defined hubs. Phone numbers detect which hub a spoke belongs to.
-// `mapEmbedQuery` feeds the Maps Embed API on project pages; replace
-// with a proper Google Business Profile embed URL by setting
-// `gbpEmbedUrl` on the hub if you want the rich card with reviews.
+// All 8 hubs in operation. Phone numbers are kept for reference but
+// hub-of-spoke detection is by link, not phone. parentOrgUrl follows
+// the SOP convention of `[hub]#localbusiness` even if existing pages
+// don't always emit per-hub identifiers — project pages should.
+// gbpEmbedUrl is left blank; paste the Google Business Profile "Share
+// → Embed a map" iframe src URL per hub to get the rich card on
+// project pages. Without it, the project page falls back to the Maps
+// Embed API if a Google key is configured, else hides the section.
 const HUBS = {
+  chicago: {
+    hubSlug: 'chicago',
+    name: 'Chicago',
+    phone: '(773) 377-4600',
+    phoneDigits: '7733774600',
+    address: '4747 W Peterson Ave Ste 407, Chicago IL 60646',
+    addressShort: '4747 W Peterson Ave Ste 407',
+    addressCity: 'Chicago, IL 60646',
+    parentOrgUrl: 'https://www.mywindowwashing.com/chicago#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 4747 W Peterson Ave, Chicago, IL 60646',
+    gbpEmbedUrl: '',
+  },
+  lisle: {
+    hubSlug: 'lisle',
+    name: 'Lisle',
+    phone: '(630) 425-0678',
+    phoneDigits: '6304250678',
+    address: '3030 Warrenville Rd Unit 100, Lisle IL 60532',
+    addressShort: '3030 Warrenville Rd Unit 100',
+    addressCity: 'Lisle, IL 60532',
+    parentOrgUrl: 'https://www.mywindowwashing.com/lisle#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 3030 Warrenville Rd, Lisle, IL 60532',
+    gbpEmbedUrl: '',
+  },
+  'clarendon-hills': {
+    hubSlug: 'clarendon-hills',
+    name: 'Clarendon Hills',
+    phone: '(708) 332-0096',
+    phoneDigits: '7083320096',
+    address: '223 Burlington Ave Ste 2, Clarendon Hills IL 60514',
+    addressShort: '223 Burlington Ave Ste 2',
+    addressCity: 'Clarendon Hills, IL 60514',
+    parentOrgUrl: 'https://www.mywindowwashing.com/clarendon-hills#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 223 Burlington Ave, Clarendon Hills, IL 60514',
+    gbpEmbedUrl: '',
+  },
+  bloomingdale: {
+    hubSlug: 'bloomingdale',
+    name: 'Bloomingdale',
+    phone: '(630) 425-0678',
+    phoneDigits: '6304250678',
+    address: '127 E Lake St Suite 203A, Bloomingdale IL 60108',
+    addressShort: '127 E Lake St Suite 203A',
+    addressCity: 'Bloomingdale, IL 60108',
+    parentOrgUrl: 'https://www.mywindowwashing.com/bloomingdale#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 127 E Lake St, Bloomingdale, IL 60108',
+    gbpEmbedUrl: '',
+  },
+  barrington: {
+    hubSlug: 'barrington',
+    name: 'Barrington',
+    phone: '(847) 715-9493',
+    phoneDigits: '8477159493',
+    address: '118 Barrington Commons Ct Ste 222, Barrington IL 60010',
+    addressShort: '118 Barrington Commons Ct Ste 222',
+    addressCity: 'Barrington, IL 60010',
+    parentOrgUrl: 'https://www.mywindowwashing.com/barrington#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 118 Barrington Commons Ct, Barrington, IL 60010',
+    gbpEmbedUrl: '',
+  },
+  'arlington-heights': {
+    hubSlug: 'arlington-heights',
+    name: 'Arlington Heights',
+    phone: '(847) 807-1454',
+    phoneDigits: '8478071454',
+    address: '3401 N Kennicott Ave Suite A/B, Arlington Heights IL 60004',
+    addressShort: '3401 N Kennicott Ave Suite A/B',
+    addressCity: 'Arlington Heights, IL 60004',
+    parentOrgUrl: 'https://www.mywindowwashing.com/arlington-heights#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 3401 N Kennicott Ave, Arlington Heights, IL 60004',
+    gbpEmbedUrl: '',
+  },
   northbrook: {
+    hubSlug: 'northbrook',
     name: 'Northbrook',
     phone: '(847) 297-4492',
     phoneDigits: '8472974492',
@@ -40,25 +121,29 @@ const HUBS = {
     addressShort: '2970 Maria Ave Suite 229',
     addressCity: 'Northbrook, IL 60062',
     parentOrgUrl: 'https://www.mywindowwashing.com/northbrook#localbusiness',
-    hubSlug: 'northbrook',
     mapEmbedQuery: 'My Window Washing, 2970 Maria Ave Suite 229, Northbrook, IL 60062',
-    gbpEmbedUrl: '',  // paste a full "Share → Embed a map" URL from the hub's GBP listing to override
+    gbpEmbedUrl: '',
   },
-  chicago: {
-    name: 'Chicago',
-    phone: '(773) 377-4600',
-    phoneDigits: '7733774600',
-    address: 'Chicago, IL',
-    addressShort: '',
-    addressCity: 'Chicago, IL',
-    parentOrgUrl: 'https://www.mywindowwashing.com/chicago#localbusiness',
-    hubSlug: 'chicago',
-    mapEmbedQuery: 'My Window Washing Chicago, IL',
+  'round-lake': {
+    hubSlug: 'round-lake',
+    name: 'Round Lake',
+    phone: '(847) 807-1455',
+    phoneDigits: '8478071455',
+    address: '56 E Lakeview Ave, Round Lake IL 60073',
+    addressShort: '56 E Lakeview Ave',
+    addressCity: 'Round Lake, IL 60073',
+    parentOrgUrl: 'https://www.mywindowwashing.com/round-lake#localbusiness',
+    mapEmbedQuery: 'My Window Washing, 56 E Lakeview Ave, Round Lake, IL 60073',
     gbpEmbedUrl: '',
   },
 };
 
-// Pages that aren't city spokes — skip when scanning.
+const HUB_KEYS = Object.keys(HUBS);
+
+// Hub pages themselves shouldn't be treated as spokes.
+const HUB_SLUGS = new Set(HUB_KEYS);
+
+// Non-spoke pages — service pages, legal, etc.
 const NON_SPOKE = new Set([
   '404.html', 'index.html', 'contact-us.html', 'reviews.html', 'coupons.html',
   'feedback.html', 'thank-you.html', 'privacy-policy.html',
@@ -72,10 +157,19 @@ function slugToCity(slug) {
   return slug.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
-function detectHub(html) {
-  if (html.includes(HUBS.northbrook.phone) || html.includes(HUBS.northbrook.phoneDigits)) return 'northbrook';
-  if (html.includes(HUBS.chicago.phone)    || html.includes(HUBS.chicago.phoneDigits))    return 'chicago';
-  return null;
+// Link-based hub detection. For each spoke page, find which hub key it
+// links to via `href="hubkey"` (the existing "Served by Our X Office"
+// CTAs all match this). If a spoke links to multiple hubs, the one with
+// the most occurrences wins (typically there's one).
+function detectHubByLink(html) {
+  const counts = {};
+  for (const key of HUB_KEYS) {
+    const re = new RegExp(`href="${key}(?:[#?][^"]*)?"`, 'g');
+    const matches = html.match(re);
+    if (matches) counts[key] = matches.length;
+  }
+  const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return ranked.length ? ranked[0][0] : null;
 }
 
 async function geocode(address) {
@@ -90,9 +184,9 @@ async function geocode(address) {
   return { error: data.status, message: data.error_message };
 }
 
-async function enrichCoords(items, addressFor) {
+async function enrichCoords(items, addressFor, label) {
   if (!GOOGLE_KEY) {
-    console.log('GOOGLE_MAPS_API_KEY not set — skipping geocoding. nearest-city fallback will be disabled.');
+    console.log(`${label}: GOOGLE_MAPS_API_KEY not set — skipping geocode.`);
     return;
   }
   let geocoded = 0, skipped = 0, failed = 0;
@@ -105,12 +199,11 @@ async function enrichCoords(items, addressFor) {
       geocoded++;
     } else {
       failed++;
-      console.warn(`  geocode failed: ${addressFor(item)} → ${result?.error || 'no result'}${result?.message ? ' ('+result.message+')' : ''}`);
+      console.warn(`  geocode failed: ${addressFor(item)} → ${result?.error || 'no result'}${result?.message ? ' (' + result.message + ')' : ''}`);
     }
-    // Light rate limit — Google allows 50 QPS but we don't need that.
     await new Promise(r => setTimeout(r, 50));
   }
-  console.log(`geocode: ${geocoded} new, ${skipped} already had coords, ${failed} failed`);
+  console.log(`${label}: ${geocoded} new, ${skipped} kept, ${failed} failed`);
 }
 
 // ── Scan spoke pages ──────────────────────────────────────────────────
@@ -123,8 +216,10 @@ const unmapped = [];
 
 for (const file of files) {
   const slug = file.replace(/\.html$/, '');
+  // Skip the hub pages themselves — they aren't spokes.
+  if (HUB_SLUGS.has(slug)) continue;
   const html = readFileSync(join(SITE, file), 'utf8');
-  const hubKey = detectHub(html);
+  const hubKey = detectHubByLink(html);
   if (!hubKey) {
     unmapped.push(slug);
     continue;
@@ -132,42 +227,26 @@ for (const file of files) {
   scanned.push({ slug, name: slugToCity(slug), hub: hubKey });
 }
 
-// Merge with existing cities.json so manual hub overrides + lat/lng
-// survive reruns. Existing entries keep their hub; new spokes get the
-// auto-detected hub. Anything in `unmapped` falls back to Northbrook,
-// matching the user decision earlier in development.
+// ── Merge with existing cities.json ──────────────────────────────────
+// hub is ALWAYS overwritten by the fresh link-based scan (link is
+// authoritative). lat/lng are preserved if already present. Same for
+// hub.gbpEmbedUrl / hub.lat / hub.lng — preserved across reruns.
 const outPath = join(repoRoot, 'data', 'cities.json');
 const existing = existsSync(outPath) ? JSON.parse(readFileSync(outPath, 'utf8')) : { cities: [], hubs: {} };
-const existingByslug = new Map((existing.cities || []).map(c => [c.slug, c]));
+const existingBySlug = new Map((existing.cities || []).map(c => [c.slug, c]));
 
-const merged = [];
-for (const s of scanned) {
-  const prev = existingByslug.get(s.slug);
-  merged.push({
+const merged = scanned.map(s => {
+  const prev = existingBySlug.get(s.slug);
+  return {
     slug: s.slug,
-    name: prev?.name || s.name,
-    // Trust the existing hub if a human already set it; otherwise use
-    // the freshly detected one.
-    hub: prev?.hub || s.hub,
+    name: s.name,
+    hub: s.hub,
     lat: prev?.lat,
     lng: prev?.lng,
-  });
-}
-// Pages that didn't match a hub phone — keep the existing hub if we
-// already had one (likely the manual northbrook default), else default.
-for (const slug of unmapped) {
-  const prev = existingByslug.get(slug);
-  merged.push({
-    slug,
-    name: prev?.name || slugToCity(slug),
-    hub: prev?.hub || 'northbrook',
-    lat: prev?.lat,
-    lng: prev?.lng,
-  });
-}
+  };
+});
 merged.sort((a, b) => a.name.localeCompare(b.name));
 
-// Merge hub overrides (so manual gbpEmbedUrl edits aren't wiped)
 const mergedHubs = {};
 for (const [key, def] of Object.entries(HUBS)) {
   const prev = existing.hubs?.[key] || {};
@@ -175,30 +254,37 @@ for (const [key, def] of Object.entries(HUBS)) {
     ...def,
     lat: prev.lat ?? def.lat,
     lng: prev.lng ?? def.lng,
-    // gbpEmbedUrl is human-supplied; keep whatever was there.
     gbpEmbedUrl: prev.gbpEmbedUrl ?? def.gbpEmbedUrl,
   };
 }
 
-// ── Geocode ──────────────────────────────────────────────────────────
-console.log(`Scanned ${merged.length} cities (${unmapped.length} via fallback). Geocoding…`);
-await enrichCoords(merged, c => `${c.name}, IL, USA`);
-
-const hubList = Object.values(mergedHubs);
-await enrichCoords(hubList, h => h.address);
-// Re-bind in case enrichCoords mutated nested objects
-for (const h of hubList) {
-  mergedHubs[h.hubSlug] = h;
+// ── Geocode missing coords ───────────────────────────────────────────
+console.log(`Scanned ${merged.length} cities across ${HUB_KEYS.length} hubs.`);
+if (unmapped.length) {
+  console.log(`\n${unmapped.length} pages had no recognizable hub link:`);
+  for (const s of unmapped) console.log(`  - ${s}`);
 }
+
+await enrichCoords(merged, c => `${c.name}, IL, USA`, 'spokes');
+
+const hubArr = Object.values(mergedHubs);
+await enrichCoords(hubArr, h => h.address, 'hubs');
+for (const h of hubArr) mergedHubs[h.hubSlug] = h;
 
 // ── Write ────────────────────────────────────────────────────────────
 const out = {
   generatedAt: new Date().toISOString(),
   hubs: mergedHubs,
   cities: merged,
-  unmapped, // kept for diagnostics; resolveCityFromLocality doesn't use this
+  unmapped,
 };
 
 mkdirSync(join(repoRoot, 'data'), { recursive: true });
 writeFileSync(outPath, JSON.stringify(out, null, 2));
-console.log(`Wrote ${merged.length} cities to ${outPath}`);
+console.log(`\nWrote ${merged.length} cities + ${HUB_KEYS.length} hubs to ${outPath}`);
+
+// Per-hub spoke count summary for sanity
+const perHub = {};
+for (const c of merged) { perHub[c.hub] = (perHub[c.hub] || 0) + 1; }
+console.log('\nSpokes per hub:');
+for (const k of HUB_KEYS) console.log(`  ${k}: ${perHub[k] || 0}`);

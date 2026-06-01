@@ -50,7 +50,22 @@ const HUBS = {
     addressCity: 'Chicago, IL 60646',
     parentOrgUrl: 'https://www.mywindowwashing.com/chicago#localbusiness',
     mapEmbedQuery: 'My Window Washing, 4747 W Peterson Ave, Chicago, IL 60646',
-    gbpEmbedUrl: '',
+    lat: 41.9896354, lng: -87.7480264,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2965.4957316778646!2d-87.7480264!3d41.989635400000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880fcdc8b0b00001%3A0xbda12800f8b81a61!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336269172!5m2!1sen!2sus',
+  },
+  'chicago-downtown': {
+    hubSlug: 'chicago-downtown',
+    name: 'Chicago Downtown',
+    // TODO fill from the new hub page when it ships
+    phone: '(773) 377-4600',
+    phoneDigits: '7733774600',
+    address: 'Chicago, IL (Downtown office — address pending)',
+    addressShort: '',
+    addressCity: 'Chicago, IL',
+    parentOrgUrl: 'https://www.mywindowwashing.com/chicago-downtown#localbusiness',
+    mapEmbedQuery: 'My Window Washing and Gutter Cleaning, Downtown Chicago, IL',
+    lat: 41.8823461, lng: -87.6271218,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2970.488693859754!2d-87.62712180000001!3d41.8823461!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880e2d687b140b97%3A0x9ee6a2e41c7ce4d5!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336126566!5m2!1sen!2sus',
   },
   lisle: {
     hubSlug: 'lisle',
@@ -62,7 +77,8 @@ const HUBS = {
     addressCity: 'Lisle, IL 60532',
     parentOrgUrl: 'https://www.mywindowwashing.com/lisle#localbusiness',
     mapEmbedQuery: 'My Window Washing, 3030 Warrenville Rd, Lisle, IL 60532',
-    gbpEmbedUrl: '',
+    lat: 41.8103262, lng: -88.1126692,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2973.8344692705614!2d-88.1126692!3d41.8103262!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88ea3bee3f1d059b%3A0x99c27efdee0e9341!2sMy%20Window%20Washing!5e0!3m2!1sen!2sus!4v1780336091358!5m2!1sen!2sus',
   },
   'clarendon-hills': {
     hubSlug: 'clarendon-hills',
@@ -74,7 +90,8 @@ const HUBS = {
     addressCity: 'Clarendon Hills, IL 60514',
     parentOrgUrl: 'https://www.mywindowwashing.com/clarendon-hills#localbusiness',
     mapEmbedQuery: 'My Window Washing, 223 Burlington Ave, Clarendon Hills, IL 60514',
-    gbpEmbedUrl: '',
+    lat: 41.797031, lng: -87.9561133,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2974.4516009721688!2d-87.9561133!3d41.797031!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880e386ec06555b1%3A0xe8778d28539ead87!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336303237!5m2!1sen!2sus',
   },
   bloomingdale: {
     hubSlug: 'bloomingdale',
@@ -86,7 +103,8 @@ const HUBS = {
     addressCity: 'Bloomingdale, IL 60108',
     parentOrgUrl: 'https://www.mywindowwashing.com/bloomingdale#localbusiness',
     mapEmbedQuery: 'My Window Washing, 127 E Lake St, Bloomingdale, IL 60108',
-    gbpEmbedUrl: '',
+    lat: 41.9590252, lng: -88.0785491,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2966.9213108853833!2d-88.07854909999999!3d41.9590252!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880fad57d613c9b3%3A0xe075991b3ccc0135!2sMy%20Window%20Washing!5e0!3m2!1sen!2sus!4v1780336191168!5m2!1sen!2sus',
   },
   barrington: {
     hubSlug: 'barrington',
@@ -98,7 +116,8 @@ const HUBS = {
     addressCity: 'Barrington, IL 60010',
     parentOrgUrl: 'https://www.mywindowwashing.com/barrington#localbusiness',
     mapEmbedQuery: 'My Window Washing, 118 Barrington Commons Ct, Barrington, IL 60010',
-    gbpEmbedUrl: '',
+    lat: 42.1553509, lng: -88.13528,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2957.763339794153!2d-88.13528!3d42.155350899999995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880fb0b18093ae07%3A0x7646a2e32facc8c7!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336241164!5m2!1sen!2sus',
   },
   'arlington-heights': {
     hubSlug: 'arlington-heights',
@@ -110,7 +129,8 @@ const HUBS = {
     addressCity: 'Arlington Heights, IL 60004',
     parentOrgUrl: 'https://www.mywindowwashing.com/arlington-heights#localbusiness',
     mapEmbedQuery: 'My Window Washing, 3401 N Kennicott Ave, Arlington Heights, IL 60004',
-    gbpEmbedUrl: '',
+    lat: 42.1370898, lng: -87.995657,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2958.6166286809944!2d-87.995657!3d42.1370898!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880fbc22b36815ad%3A0xc04d993f17cfcdc4!2sMy%20Window%20Washing!5e0!3m2!1sen!2sus!4v1780336157317!5m2!1sen!2sus',
   },
   northbrook: {
     hubSlug: 'northbrook',
@@ -122,7 +142,8 @@ const HUBS = {
     addressCity: 'Northbrook, IL 60062',
     parentOrgUrl: 'https://www.mywindowwashing.com/northbrook#localbusiness',
     mapEmbedQuery: 'My Window Washing, 2970 Maria Ave Suite 229, Northbrook, IL 60062',
-    gbpEmbedUrl: '',
+    lat: 42.14585599, lng: -87.8526241,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2958.207046771161!2d-87.8526241!3d42.14585599999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880fc0a81b642971%3A0x944979ffa928abd9!2sMy%20Window%20Washing!5e0!3m2!1sen!2sus!4v1780336214097!5m2!1sen!2sus',
   },
   'round-lake': {
     hubSlug: 'round-lake',
@@ -134,7 +155,8 @@ const HUBS = {
     addressCity: 'Round Lake, IL 60073',
     parentOrgUrl: 'https://www.mywindowwashing.com/round-lake#localbusiness',
     mapEmbedQuery: 'My Window Washing, 56 E Lakeview Ave, Round Lake, IL 60073',
-    gbpEmbedUrl: '',
+    lat: 42.3694968, lng: -88.0811504,
+    gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2947.7345179539743!2d-88.0811504!3d42.36949679999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880f9b503bf808d5%3A0x4782882ba172e8d0!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336324837!5m2!1sen!2sus',
   },
 };
 
@@ -254,7 +276,10 @@ for (const [key, def] of Object.entries(HUBS)) {
     ...def,
     lat: prev.lat ?? def.lat,
     lng: prev.lng ?? def.lng,
-    gbpEmbedUrl: prev.gbpEmbedUrl ?? def.gbpEmbedUrl,
+    // Use `||` so a previously-empty string in cities.json gets
+    // replaced by the new value baked into HUBS; once it's populated
+    // here, ad-hoc edits to cities.json win on the next rebuild.
+    gbpEmbedUrl: prev.gbpEmbedUrl || def.gbpEmbedUrl,
   };
 }
 

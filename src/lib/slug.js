@@ -115,16 +115,29 @@ export function findNearestCity(lat, lng) {
   return best ? { ...best, distanceMiles: bestDist } : null;
 }
 
-// SOP §1: `[service]-[city]-il`, hyphens only, end with `-il`, descriptor
-// goes at the tail (not a year). Returns lowercase, validated.
-export function buildSlug({ service, citySlug, descriptor = '' }) {
-  const parts = [service, citySlug];
+// New URL pattern (per operational decision, overrides the SOP's "no
+// year in URL" rule):
+//   [service]-in-[city]-[mm-dd-yy]            e.g. window-cleaning-in-round-lake-beach-06-01-26
+//   [service]-in-[city]-[mm-dd-yy]-[descriptor]   when same city + service publishes more than once on the same day
+// The date is the day the project is submitted (today), not the job
+// completion date — gives a near-zero collision rate without forcing
+// the tech to think about uniqueness.
+export function buildSlug({ service, citySlug, descriptor = '', date }) {
+  const dateStr = formatDateMMDDYY(date);
+  const parts = [service, 'in', citySlug, dateStr];
   if (descriptor) {
     const d = descriptor.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
     if (d) parts.push(d);
   }
-  parts.push('il');
   return parts.join('-').replace(/-+/g, '-');
+}
+
+function formatDateMMDDYY(date) {
+  const d = date instanceof Date ? date : (date ? new Date(date) : new Date());
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}-${dd}-${yy}`;
 }
 
 // Returns the slug if free, otherwise null. The route layer handles the

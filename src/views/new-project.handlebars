@@ -17,11 +17,13 @@
     <div id="address-resolved" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20;padding:10px 12px;border-radius:8px;font-size:14px;margin-top:4px;">
       <strong id="resolved-line">—</strong>
     </div>
-    <input type="hidden" name="address" id="address-formatted" value="{{formValues.address}}">
-    <input type="hidden" name="city"    id="address-city"      value="{{formValues.city}}">
-    <input type="hidden" name="state"   id="address-state"     value="{{formValues.state}}">
-    <input type="hidden" name="zip"     id="address-zip"       value="{{formValues.zip}}">
-    <input type="hidden" name="place_id" id="address-place-id" value="{{formValues.place_id}}">
+    <input type="hidden" name="address"  id="address-formatted" value="{{formValues.address}}">
+    <input type="hidden" name="city"     id="address-city"      value="{{formValues.city}}">
+    <input type="hidden" name="state"    id="address-state"     value="{{formValues.state}}">
+    <input type="hidden" name="zip"      id="address-zip"       value="{{formValues.zip}}">
+    <input type="hidden" name="lat"      id="address-lat"       value="{{formValues.lat}}">
+    <input type="hidden" name="lng"      id="address-lng"       value="{{formValues.lng}}">
+    <input type="hidden" name="place_id" id="address-place-id"  value="{{formValues.place_id}}">
 
     {{#if collision}}
     <div class="field" style="margin-top:14px;">
@@ -135,7 +137,7 @@
     var ac = new google.maps.places.Autocomplete(input, {
       types: ['address'],
       componentRestrictions: { country: 'us' },
-      fields: ['address_components', 'formatted_address', 'place_id'],
+      fields: ['address_components', 'formatted_address', 'place_id', 'geometry'],
     });
     ac.addListener('place_changed', function () {
       var place = ac.getPlace();
@@ -148,10 +150,17 @@
         else if (c.types.indexOf('administrative_area_level_1') !== -1) state = c.short_name;
         else if (c.types.indexOf('postal_code') !== -1) zip = c.long_name;
       }
+      var lat = '', lng = '';
+      if (place.geometry && place.geometry.location) {
+        lat = place.geometry.location.lat();
+        lng = place.geometry.location.lng();
+      }
       document.getElementById('address-formatted').value = place.formatted_address || '';
       document.getElementById('address-city').value = city;
       document.getElementById('address-state').value = state;
       document.getElementById('address-zip').value = zip;
+      document.getElementById('address-lat').value = lat;
+      document.getElementById('address-lng').value = lng;
       document.getElementById('address-place-id').value = place.place_id || '';
       setResolved(place.formatted_address, city, state, zip);
     });

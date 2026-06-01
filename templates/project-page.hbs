@@ -492,6 +492,26 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   </div>
 </div>
 
+{{#if map}}
+<!-- ═══ OFFICE LOCATION MAP ═══ -->
+<div class="proj-section" style="background:#f5f8fa;padding-top:24px;padding-bottom:32px;">
+  <div class="proj-section-inner">
+    <div class="proj-section-label"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Office Location</div>
+    <h2 class="proj-section-title" style="margin-bottom:8px;">Served by Our {{hub.name}} Office</h2>
+    <p class="proj-section-sub">{{hub.address}}</p>
+    <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(19,48,71,.12);">
+      <iframe
+        src="{{map.src}}"
+        width="100%" height="380"
+        style="border:0;display:block;"
+        allowfullscreen="" loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        title="{{hub.name}} office location"></iframe>
+    </div>
+  </div>
+</div>
+{{/if}}
+
 <!-- ═══ CTA ═══ -->
 <div class="proj-cta">
   <h2>Ready to Schedule Your {{service.label}}?</h2>

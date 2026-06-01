@@ -55,10 +55,12 @@ router.post('/new',
         return res.status(400).render('error', { message: 'Pick a valid service.' });
       }
       // City comes from the Google Places locality we extracted client-
-      // side. resolveCityFromLocality falls back to Northbrook if the
-      // city doesn't have an existing spoke page — we'll revisit hub
-      // determination in a follow-up.
-      const city = resolveCityFromLocality(b.city);
+      // side. resolveCityFromLocality matches against known spokes; if
+      // no spoke exists, it picks the nearest one by lat/lng and
+      // inherits that hub.
+      const lat = b.lat ? parseFloat(b.lat) : null;
+      const lng = b.lng ? parseFloat(b.lng) : null;
+      const city = resolveCityFromLocality(b.city, { lat, lng });
       if (!city) {
         return res.status(400).render('error', {
           message: 'Pick a valid street address — we need the city to build the project page.',

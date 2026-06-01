@@ -52,27 +52,67 @@ export function getHub(key) {
   return loadCities().hubs[key];
 }
 
-// Take Google's locality string (e.g. "Highland Park") and return the
-// matching city from cities.json. If no spoke page exists for it, we
-// fabricate a city-shaped object so the project page can still render
-// (hub defaults to Northbrook — the user said real hub determination
-// will land in a later iteration).
-export function resolveCityFromLocality(locality, { fallbackHub = 'northbrook' } = {}) {
+// Take Google's locality string (e.g. "Highland Park") and return a
+// city object. Strategy:
+//   1. If the locality matches a known spoke slug → use it as-is.
+//   2. Otherwise, if we have lat/lng for the picked address, pick the
+//      geographically nearest known city and inherit its hub. The slug
+//      stays the actual city name so URL + breadcrumbs reflect where
+//      the job happened, but the hub binding (phone, schema
+//      parentOrganization, map embed) follows the nearest spoke.
+//   3. Otherwise, fall back to Northbrook with the actual city name.
+export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'northbrook' } = {}) {
   if (!locality) return null;
-  const slug = locality
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const slug = slugifyCity(locality);
   const known = getCity(slug);
   if (known) return { ...known, source: 'cities.json' };
-  const niceName = locality.trim();
+
+  if (lat != null && lng != null) {
+    const nearest = findNearestCity(lat, lng);
+    if (nearest) {
+      return {
+        slug,
+        name: locality.trim(),
+        hub: nearest.hub,
+        source: `nearest:${nearest.slug}`,
+        nearestCity: { slug: nearest.slug, name: nearest.name, miles: nearest.distanceMiles },
+      };
+    }
+  }
   return {
     slug,
-    name: niceName,
+    name: locality.trim(),
     hub: fallbackHub,
     source: 'fallback',
   };
+}
+
+function slugifyCity(locality) {
+  return locality.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Haversine distance between two lat/lng points, in miles.
+function haversineMiles(lat1, lng1, lat2, lng2) {
+  const toRad = x => x * Math.PI / 180;
+  const R = 3958.8;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+export function findNearestCity(lat, lng) {
+  if (lat == null || lng == null) return null;
+  const cities = loadCities().cities.filter(c => c.lat != null && c.lng != null);
+  if (cities.length === 0) return null;
+  let best = null, bestDist = Infinity;
+  for (const c of cities) {
+    const d = haversineMiles(lat, lng, c.lat, c.lng);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  return best ? { ...best, distanceMiles: bestDist } : null;
 }
 
 // SOP §1: `[service]-[city]-il`, hyphens only, end with `-il`, descriptor

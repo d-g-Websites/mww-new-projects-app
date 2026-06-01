@@ -143,6 +143,7 @@ function buildView(project, opts = {}) {
     serviceTags: defaultServiceTags(service.value),
     related,
     footerRecent,
+    map: buildMap(hub),
     seo: {
       title:         seoTitle,
       description:   seoDesc,
@@ -196,6 +197,24 @@ function defaultServiceTags(serviceVal) {
     return ['Deionized Water Rinse', 'Soft-Brush Wash', 'Panel Inspection', 'Edge Detailing'];
   }
   return [];
+}
+
+// If the hub has a real Google Business Profile embed URL configured,
+// use that (rich card with reviews + photos). Otherwise fall back to
+// the Maps Embed API with the hub's address as a place query, which
+// just shows a marker. Returns null when neither is possible — the
+// template hides the section in that case.
+function buildMap(hub) {
+  if (hub.gbpEmbedUrl) {
+    return { src: hub.gbpEmbedUrl, kind: 'gbp' };
+  }
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key || !hub.mapEmbedQuery) return null;
+  const q = encodeURIComponent(hub.mapEmbedQuery);
+  return {
+    src: `https://www.google.com/maps/embed/v1/place?key=${key}&q=${q}`,
+    kind: 'embed',
+  };
 }
 
 function parseNarrative(raw) {

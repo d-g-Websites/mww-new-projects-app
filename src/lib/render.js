@@ -27,65 +27,144 @@ function monthYear(isoDate) {
   return d.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 }
 
-// Build the JSON-LD @graph the SOP requires (Service, Breadcrumb,
-// optionally Review, two ImageObjects). Stored as a raw string so the
-// template emits it inside the <script> tag without HTML-escaping.
-// The Review block is included only when we have BOTH a customer name
-// and review body — Google rejects schema Review blocks missing
-// either, so a URL-only "read on Google" entry doesn't qualify.
+// Build the JSON-LD @graph for a project page. Project pages are
+// leaf documentation — one instance of a Service delivered by a
+// LocalBusiness in a Place — so the graph is organized as:
+//
+//   WebPage (the page itself)
+//     ├─ BreadcrumbList
+//     ├─ Article (narrative + photos)  ← mainEntity
+//     │   ├─ about → Service instance
+//     │   ├─ image → ImageObjects
+//     │   └─ author/publisher → hub LocalBusiness (defined on hub page)
+//     ├─ Service instance (thin — provider + areaServed)
+//     ├─ Review (only when both name + text present) → itemReviewed = Service
+//     └─ ImageObjects (before/after + any extras)
+//
+// Review.itemReviewed points at the Service instance, NOT the
+// LocalBusiness, so per-project 5-star reviews don't artificially
+// inflate the hub's aggregateRating across dozens of project pages.
 function buildSchema(p, service, city, hub) {
   const canonical = `${SITE_ROOT}/projects/${p.slug}`;
   const beforeUrl = `${SITE_ROOT}/projects/img/${p.slug}-before.webp`;
   const afterUrl  = `${SITE_ROOT}/projects/img/${p.slug}-after.webp`;
+  const extraUrls = (p.galleryFilenames || []).map(fn => `${SITE_ROOT}/projects/img/${fn}`);
+
+  const webpageId  = `${canonical}#webpage`;
+  const articleId  = `${canonical}#article`;
+  const serviceId  = `${canonical}#service-instance`;
+  const beforeId   = `${canonical}#before-image`;
+  const afterId    = `${canonical}#after-image`;
+  const breadcrumbId = `${canonical}#breadcrumb`;
+  const dateISO    = p.review_date || new Date().toISOString().slice(0, 10);
+
+  const imageRefs = [
+    { '@id': beforeId },
+    { '@id': afterId },
+    ...extraUrls.map((_, i) => ({ '@id': `${canonical}#extra-${i + 1}-image` })),
+  ];
+
   const graph = [
     {
-      '@type': 'Service',
-      '@id': `${canonical}#service`,
-      name: `${service.label} — ${city.name}, IL`,
-      description: p.serviceDescription,
-      provider: { '@id': hub.parentOrgUrl },
-      areaServed: {
-        '@type': 'City',
-        name: city.name,
-        containedInPlace: { '@type': 'State', name: 'Illinois' },
-      },
-      serviceType: service.schemaType,
-      offers: { '@type': 'Offer', priceCurrency: 'USD', priceRange: '$140-$290' },
+      '@type': 'WebPage',
+      '@id':   webpageId,
+      url:     canonical,
+      name:    p.seoTitle || `${service.label} in ${city.name}, IL`,
+      description: p.seoDescription || p.serviceDescription,
+      datePublished: dateISO,
+      dateModified:  dateISO,
+      inLanguage: 'en-US',
+      isPartOf:           { '@id': `${SITE_ROOT}#website` },
+      breadcrumb:         { '@id': breadcrumbId },
+      primaryImageOfPage: { '@id': afterId },
+      mainEntity:         { '@id': articleId },
     },
     {
       '@type': 'BreadcrumbList',
+      '@id':   breadcrumbId,
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home',     item: `${SITE_ROOT}/` },
         { '@type': 'ListItem', position: 2, name: 'Projects', item: `${SITE_ROOT}/projects/` },
         { '@type': 'ListItem', position: 3, name: `${service.label} — ${city.name}, IL`, item: canonical },
       ],
     },
+    {
+      '@type': 'Article',
+      '@id':   articleId,
+      headline:    `${service.label} in ${city.name}, IL${p.dateLabel ? ` — ${p.dateLabel}` : ''}`,
+      description: p.serviceDescription,
+      datePublished: dateISO,
+      dateModified:  dateISO,
+      image:     imageRefs,
+      articleBody: (p.narrative || '').replace(/\s+/g, ' ').trim(),
+      author:    { '@id': hub.parentOrgUrl },
+      publisher: { '@id': hub.parentOrgUrl },
+      mainEntityOfPage: { '@id': webpageId },
+      about:     { '@id': serviceId },
+      locationCreated: {
+        '@type': 'Place',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: city.name,
+          addressRegion:   'IL',
+          addressCountry:  'US',
+        },
+      },
+    },
+    {
+      '@type': 'Service',
+      '@id':   serviceId,
+      name:        service.label,
+      serviceType: service.schemaType,
+      description: p.serviceDescription,
+      provider:    { '@id': hub.parentOrgUrl },
+      areaServed: {
+        '@type': 'City',
+        name: city.name,
+        containedInPlace: { '@type': 'State', name: 'Illinois' },
+      },
+    },
+    {
+      '@type': 'ImageObject',
+      '@id':   beforeId,
+      url:        beforeUrl,
+      contentUrl: beforeUrl,
+      caption:    p.beforeCaption,
+      width:  1200,
+      height: 800,
+    },
+    {
+      '@type': 'ImageObject',
+      '@id':   afterId,
+      url:        afterUrl,
+      contentUrl: afterUrl,
+      caption:    p.afterCaption,
+      width:  1200,
+      height: 800,
+    },
+    ...extraUrls.map((u, i) => ({
+      '@type': 'ImageObject',
+      '@id':   `${canonical}#extra-${i + 1}-image`,
+      url:        u,
+      contentUrl: u,
+      caption:    `${service.label} project photo — ${city.name}, IL`,
+      width:  1200,
+      height: 800,
+    })),
   ];
+
   if (p.customer_name && p.review_text) {
     graph.push({
       '@type': 'Review',
-      '@id': `${canonical}#review`,
+      '@id':   `${canonical}#review`,
+      itemReviewed:  { '@id': serviceId },
       author:        { '@type': 'Person', name: p.customer_name },
-      datePublished: p.review_date,
+      datePublished: dateISO,
       reviewBody:    p.review_text,
       reviewRating:  { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
-      itemReviewed:  { '@id': hub.parentOrgUrl },
     });
   }
-  graph.push(
-    {
-      '@type': 'ImageObject',
-      name: `${service.label} before — ${city.name} IL ${p.home_type || ''}`.trim(),
-      url: beforeUrl,
-      description: p.beforeCaption,
-    },
-    {
-      '@type': 'ImageObject',
-      name: `${service.label} after — ${city.name} IL ${p.home_type || ''}`.trim(),
-      url: afterUrl,
-      description: p.afterCaption,
-    },
-  );
+
   return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2);
 }
 
@@ -205,7 +284,17 @@ function buildView(project, opts = {}) {
 
   // Schema JSON-LD wants a few extra strings derived above.
   view.schemaJson = buildSchema(
-    { ...project, serviceDescription: heroSub, beforeCaption, afterCaption },
+    {
+      ...project,
+      serviceDescription: heroSub,
+      beforeCaption,
+      afterCaption,
+      narrative: project.narrative,
+      galleryFilenames: view.gallery,
+      dateLabel,
+      seoTitle:       view.seo.title,
+      seoDescription: view.seo.description,
+    },
     service, city, hub
   );
   return view;

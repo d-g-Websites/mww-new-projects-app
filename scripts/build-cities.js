@@ -57,14 +57,13 @@ const HUBS = {
   'chicago-downtown': {
     hubSlug: 'chicago-downtown',
     name: 'Chicago Downtown',
-    // TODO fill from the new hub page when it ships
     phone: '(773) 377-4600',
     phoneDigits: '7733774600',
-    address: 'Chicago, IL (Downtown office — address pending)',
-    addressShort: '',
-    addressCity: 'Chicago, IL',
+    address: '1 N State St, Chicago IL 60602',
+    addressShort: '1 N State St',
+    addressCity: 'Chicago, IL 60602',
     parentOrgUrl: 'https://www.mywindowwashing.com/chicago-downtown#localbusiness',
-    mapEmbedQuery: 'My Window Washing and Gutter Cleaning, Downtown Chicago, IL',
+    mapEmbedQuery: 'My Window Washing and Gutter Cleaning, 1 N State St, Chicago, IL 60602',
     lat: 41.8823461, lng: -87.6271218,
     gbpEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2970.488693859754!2d-87.62712180000001!3d41.8823461!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880e2d687b140b97%3A0x9ee6a2e41c7ce4d5!2sMy%20Window%20Washing%20and%20Gutter%20Cleaning!5e0!3m2!1sen!2sus!4v1780336126566!5m2!1sen!2sus',
   },

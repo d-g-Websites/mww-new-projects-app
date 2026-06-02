@@ -6,6 +6,14 @@
 
 <div class="card">
   <h2>Narrative — edit if needed</h2>
+  {{#if narrativeFailed}}
+  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:12px;">
+    <strong>Narrative didn't generate automatically.</strong> Click <em>Regenerate narrative</em> to retry, or just type the two paragraphs you want and hit <em>Save narrative</em>.
+  </div>
+  <form method="post" action="/projects/{{project.id}}/regenerate-narrative" style="margin-bottom:12px;">
+    <button type="submit" class="btn">Regenerate narrative</button>
+  </form>
+  {{/if}}
   <form method="post" action="/projects/{{project.id}}/narrative">
     <textarea name="narrative" rows="14" style="font-family:inherit;">{{project.narrative}}</textarea>
     <button type="submit" class="btn btn-outline" style="margin-top:10px;">Save narrative</button>

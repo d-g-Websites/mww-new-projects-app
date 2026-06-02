@@ -4,8 +4,13 @@ import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality } from '../lib/slug.js';
-import { insertDraft, updateDraft, getProject, listPublished, listPending, markPending, deleteProject } from '../lib/db.js';
+import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
+
+// Placeholder text shown when Claude narrative generation fails, so
+// the tech can spot it immediately on the preview page and either
+// retry or edit it manually.
+const NARRATIVE_PLACEHOLDER = "⚠️ The automatic narrative generation didn't complete (the AI service may have timed out or hit a rate limit). Click \"Regenerate narrative\" below to retry, or replace this text with the two paragraphs you want to publish.";
 import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
 import { renderProjectHtml } from '../lib/render.js';
@@ -22,11 +27,12 @@ const upload = multer({
 
 router.use(requireAuth);
 
-// ── Dashboard home: pending approvals + recently published ──
+// ── Dashboard home: drafts + pending approvals + recently published ──
 router.get('/', (req, res) => {
+  const drafts  = listDrafts();
   const pending = listPending();
   const recent  = listPublished({ limit: 10 });
-  res.render('index', { pending, recent });
+  res.render('index', { drafts, pending, recent });
 });
 
 // ── Step 1 of new-project flow: pick a service. ──
@@ -84,22 +90,35 @@ router.post('/new',
     { name: 'extras', maxCount: 5 },
   ]),
   async (req, res, next) => {
+    const b = req.body;
+
+    // Helper: re-render the form with everything the tech typed plus a
+    // banner. Used for validation issues where there's no draft to
+    // recover from yet (no DB row was created).
+    const reRenderForm = (overrides = {}) => {
+      const svc = getService(b.service) || SERVICES[0];
+      return res.render('new-project', {
+        service: svc,
+        detailsPartial: DETAILS_PARTIALS[svc.value] || 'details-generic',
+        today: new Date().toISOString().slice(0, 10),
+        formValues: b,
+        googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
+        ...overrides,
+      });
+    };
+
     try {
-      const b = req.body;
       const service = getService(b.service);
       if (!service) {
-        return res.status(400).render('error', { message: 'Pick a valid service.' });
+        return res.redirect('/new');
       }
-      // City comes from the Google Places locality we extracted client-
-      // side. resolveCityFromLocality matches against known spokes; if
-      // no spoke exists, it picks the nearest one by lat/lng and
-      // inherits that hub.
+
       const lat = b.lat ? parseFloat(b.lat) : null;
       const lng = b.lng ? parseFloat(b.lng) : null;
       const city = resolveCityFromLocality(b.city, { lat, lng });
       if (!city) {
-        return res.status(400).render('error', {
-          message: 'Pick a valid street address — we need the city to build the project page.',
+        return reRenderForm({
+          errorBanner: 'Pick a real street address from the dropdown — we need the city to build the project page.',
         });
       }
 
@@ -109,7 +128,6 @@ router.post('/new',
         descriptor: b.descriptor || '',
       });
 
-      // Collision check covers DB + existing static-site repo.
       const siteRepo = process.env.SITE_REPO_PATH;
       if (!isSlugAvailable(slug, siteRepo)) {
         return res.status(409).render('new-project', {
@@ -125,47 +143,43 @@ router.post('/new',
         });
       }
 
-      // Resize uploads → webp into tmp/<slug>/img.
       const beforeUpload = req.files?.before?.[0];
       const afterUpload  = req.files?.after?.[0];
       if (!beforeUpload || !afterUpload) {
-        return res.status(400).render('error', { message: 'Both before and after photos are required.' });
+        return reRenderForm({ errorBanner: 'Both before and after photos are required.' });
       }
+
+      // Resize photos. If this fails the tech has to re-upload — there's
+      // no way to recover photo bytes after this handler ends — so we
+      // bail back to the form with the bad-photo message.
       const stagedDir = join(process.cwd(), 'tmp', 'staged', slug);
       mkdirSync(stagedDir, { recursive: true });
-      const { beforeOut, afterOut } = await processBeforeAfter({
-        before: beforeUpload.path,
-        after:  afterUpload.path,
-        slug,
-        outDir: stagedDir,
-      });
-
-      // Optional: up to 5 additional photos for the in-page gallery
-      // and the hero background. Empty input slots are silently
-      // skipped — no required count.
-      const extraUploads = req.files?.extras || [];
-      const extraOuts = await processExtras({
-        files: extraUploads,
-        slug,
-        outDir: stagedDir,
-        max: 5,
-      });
+      let beforeOut, afterOut, extraOuts;
+      try {
+        ({ beforeOut, afterOut } = await processBeforeAfter({
+          before: beforeUpload.path,
+          after:  afterUpload.path,
+          slug,
+          outDir: stagedDir,
+        }));
+        extraOuts = await processExtras({
+          files: req.files?.extras || [],
+          slug,
+          outDir: stagedDir,
+          max: 5,
+        });
+      } catch (err) {
+        console.error('[photos] failed:', err);
+        return reRenderForm({
+          errorBanner: `Photo processing failed: ${err.message}. Try different photos.`,
+        });
+      }
 
       const extras = collectExtras(service.value, b);
 
-      // Generate narrative via Claude.
-      const paragraphs = await generateNarrative({
-        service: service.label,
-        city:    `${city.name}, IL`,
-        homeType: b.home_type,
-        metric:   `${b.metric_value || ''} ${b.metric_label || ''}`.trim(),
-        challenge: b.challenge,
-        bulletFacts: b.bullet_facts,
-        customerNote: b.customer_note,
-        extras,
-      });
-      const narrative = paragraphs.join('\n\n');
-
+      // Save the draft NOW, before the narrative call. If Claude times
+      // out, the tech doesn't lose anything — they can resume from the
+      // dashboard's "Drafts" list and click "Regenerate narrative".
       const id = insertDraft({
         slug,
         service: service.value,
@@ -183,18 +197,68 @@ router.post('/new',
         customer_name: b.customer_name || null,
         review_date: b.review_date || new Date().toISOString().slice(0, 10),
         review_url: b.review_url || null,
-        narrative,
+        narrative: NARRATIVE_PLACEHOLDER,
         before_photo: beforeOut,
         after_photo:  afterOut,
         extras,
         extra_photos: extraOuts,
+        bullet_facts: b.bullet_facts || null,
+        customer_note: b.customer_note || null,
       });
+
+      // Try Claude. If it fails, leave the placeholder in place and let
+      // the tech retry from the preview page.
+      try {
+        const paragraphs = await generateNarrative({
+          service:  service.label,
+          city:     `${city.name}, IL`,
+          homeType: b.home_type,
+          metric:   `${b.metric_value || ''} ${b.metric_label || ''}`.trim(),
+          challenge:    b.challenge,
+          bulletFacts:  b.bullet_facts,
+          customerNote: b.customer_note,
+          extras,
+        });
+        updateDraft(id, { narrative: paragraphs.join('\n\n') });
+      } catch (err) {
+        console.error(`[narrative] failed for project ${id}:`, err.message);
+        // narrative column already holds NARRATIVE_PLACEHOLDER — preview
+        // will surface a "Regenerate narrative" button.
+      }
 
       res.redirect(`/projects/${id}/preview`);
     } catch (err) {
       next(err);
     }
   });
+
+// Re-run Claude on a stored draft. Reads bullet_facts / extras / etc.
+// back out of the DB so the retry uses whatever the tech originally
+// typed, no need to refill the form.
+router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
+  try {
+    const p = getProject(Number(req.params.id));
+    if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (p.status === 'published') {
+      return res.status(409).render('error', { message: 'Already published — cannot regenerate.' });
+    }
+    const paragraphs = await generateNarrative({
+      service:  p.service_label,
+      city:     `${p.city_name}, IL`,
+      homeType: p.home_type,
+      metric:   `${p.metric_value || ''} ${p.metric_label || ''}`.trim(),
+      challenge:    p.challenge,
+      bulletFacts:  p.bullet_facts,
+      customerNote: p.customer_note,
+      extras:       p.extras,
+    });
+    updateDraft(p.id, { narrative: paragraphs.join('\n\n') });
+    res.redirect(`/projects/${p.id}/preview`);
+  } catch (err) {
+    console.error(`[narrative regen] failed for project ${req.params.id}:`, err.message);
+    next(err);
+  }
+});
 
 // ── Preview the generated HTML before publishing ──
 router.get('/projects/:id/preview', (req, res) => {
@@ -204,7 +268,8 @@ router.get('/projects/:id/preview', (req, res) => {
   // still in tmp/ (the page will show 404s for the <img> tags — that's
   // fine, the tech is reviewing copy, not the photos).
   const html = renderProjectHtml(p);
-  res.render('preview', { project: p, html });
+  const narrativeFailed = (p.narrative || '').trimStart().startsWith('⚠');
+  res.render('preview', { project: p, html, narrativeFailed });
 });
 
 // Edit the narrative in-place before publishing.

@@ -3,6 +3,7 @@
   <a href="/new" class="muted" style="font-size:13px;">change</a>
 </div>
 {{#if collision}}<div class="alert">{{collision.message}}</div>{{/if}}
+{{#if errorBanner}}<div class="alert">{{errorBanner}}</div>{{/if}}
 
 <form method="post" action="/new" enctype="multipart/form-data" id="project-form">
   <input type="hidden" name="service" value="{{service.value}}">

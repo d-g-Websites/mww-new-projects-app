@@ -5,13 +5,46 @@
 </div>
 
 <div class="card">
+  <h2>Pending approval {{#if pending.length}}<span style="background:#fff8e1;color:#7a5400;padding:2px 10px;border-radius:20px;font-size:13px;margin-left:6px;">{{pending.length}}</span>{{/if}}</h2>
+  {{#if pending.length}}
+  <ul class="list pending-list">
+    {{#each pending}}
+    <li>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div>
+          <strong>{{service_label}} — {{city_name}}, IL</strong>
+          <div class="muted" style="font-size:13px;">Hub: {{hub}} · Slug: <code>{{slug}}</code></div>
+          <div class="muted" style="font-size:12px;">Submitted {{created_at}}</div>
+        </div>
+        <div class="pending-actions">
+          <a class="btn btn-outline" href="/projects/{{id}}/preview">Preview / Edit</a>
+          <form method="post" action="/projects/{{id}}/publish" style="display:inline;">
+            <button type="submit" class="btn">Publish</button>
+          </form>
+          <form method="post" action="/projects/{{id}}/delete" style="display:inline;"
+                onsubmit="return confirm('Delete this project? This cannot be undone.');">
+            <button type="submit" class="btn btn-outline" style="color:#c62828;border-color:#ef9a9a;">Delete</button>
+          </form>
+        </div>
+      </div>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="muted">Nothing waiting. New tech submissions will show up here.</p>
+  {{/if}}
+</div>
+
+<div class="card">
   <h2>Recently published</h2>
   {{#if recent.length}}
   <ul class="list">
     {{#each recent}}
     <li>
-      <strong>{{service_label}} — {{city_name}}, IL</strong><br>
-      <span class="muted">/{{slug}} · {{published_at}}</span>
+      <strong>{{service_label}} — {{city_name}}, IL</strong>
+      <div class="muted" style="font-size:13px;">
+        <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank">/{{slug}}</a> · {{published_at}}
+      </div>
     </li>
     {{/each}}
   </ul>
@@ -19,3 +52,9 @@
   <p class="muted">No projects published yet.</p>
   {{/if}}
 </div>
+
+<style>
+.pending-list li { padding: 14px 0; }
+.pending-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pending-actions .btn { padding: 8px 14px; font-size: 14px; }
+</style>

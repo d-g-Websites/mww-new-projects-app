@@ -1,4 +1,7 @@
-<h2 style="margin:0 0 12px;">Review &amp; publish</h2>
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;">
+  <h2 style="margin:0;">Review</h2>
+  <span class="muted" style="font-size:13px;">Status: <strong>{{project.status}}</strong></span>
+</div>
 <p class="muted">URL: <code>/projects/{{project.slug}}</code></p>
 
 <div class="card">
@@ -12,10 +15,25 @@
 <div class="card">
   <h2>Preview the page</h2>
   <iframe src="/projects/{{project.id}}/preview/iframe" style="width:100%;height:600px;border:1px solid #cfd8dc;border-radius:8px;"></iframe>
-  <p class="muted" style="margin-top:8px;">Photos will 404 in this preview — they're not uploaded yet. They'll appear once you publish.</p>
+  <p class="muted" style="margin-top:8px;">Photos will 404 in this preview — they're not on the live site yet. They'll appear once the project is published.</p>
 </div>
 
-<form method="post" action="/projects/{{project.id}}/publish">
+{{#if (eq project.status 'draft')}}
+<form method="post" action="/projects/{{project.id}}/save">
+  <button type="submit" class="btn btn-block">Save &amp; submit for approval</button>
+</form>
+<p class="muted" style="margin-top:8px;">This locks in the project and notifies the admin via Telegram. The admin then reviews and publishes from the dashboard.</p>
+{{else if (eq project.status 'pending')}}
+<div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
+  <strong>Awaiting admin approval.</strong> Use the buttons below to publish or delete.
+</div>
+<form method="post" action="/projects/{{project.id}}/publish" style="margin-bottom:10px;">
   <button type="submit" class="btn btn-block">Publish to mywindowwashing.com</button>
 </form>
-<p class="muted" style="margin-top:8px;">This commits the page, photos, sitemap, and updated spoke page to git, then pushes.</p>
+<form method="post" action="/projects/{{project.id}}/delete"
+      onsubmit="return confirm('Permanently delete this project?');">
+  <button type="submit" class="btn btn-outline btn-block" style="color:#c62828;border-color:#ef9a9a;">Delete project</button>
+</form>
+{{else}}
+<div class="alert alert-success">Already published. <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">View live</a></div>
+{{/if}}

@@ -4,7 +4,8 @@ import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality } from '../lib/slug.js';
-import { insertDraft, updateDraft, getProject, listPublished } from '../lib/db.js';
+import { insertDraft, updateDraft, getProject, listPublished, listPending, markPending, deleteProject } from '../lib/db.js';
+import { notifyNewProject } from '../lib/telegram.js';
 import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
 import { renderProjectHtml } from '../lib/render.js';
@@ -21,10 +22,11 @@ const upload = multer({
 
 router.use(requireAuth);
 
-// ── Dashboard home: drafts + recently published ──
+// ── Dashboard home: pending approvals + recently published ──
 router.get('/', (req, res) => {
-  const recent = listPublished({ limit: 10 });
-  res.render('index', { recent });
+  const pending = listPending();
+  const recent  = listPublished({ limit: 10 });
+  res.render('index', { pending, recent });
 });
 
 // ── Step 1 of new-project flow: pick a service. ──
@@ -220,14 +222,57 @@ router.get('/projects/:id/preview/iframe', (req, res) => {
   res.type('html').send(renderProjectHtml(p));
 });
 
-// Publish — write artifacts to the site repo, patch spoke + sitemap,
-// commit + push.
+// Tech's "Save" button — moves the project from draft to pending and
+// pings the admin via Telegram. No git operations yet.
+router.post('/projects/:id/save', async (req, res, next) => {
+  try {
+    const p = getProject(Number(req.params.id));
+    if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (p.status === 'published') {
+      return res.status(409).render('error', { message: 'This project is already published.' });
+    }
+    markPending(p.id);
+    // Fire-and-forget the Telegram ping so a flaky Telegram doesn't
+    // block the tech from finishing the submission.
+    notifyNewProject({ ...p, status: 'pending' }).catch(err =>
+      console.error('[telegram] notify failed:', err)
+    );
+    res.render('saved', { project: p });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Admin's "Publish" button — write artifacts to the site repo, patch
+// spoke + sitemap, commit + push.
 router.post('/projects/:id/publish', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (p.status === 'published') {
+      return res.status(409).render('error', { message: 'This project is already published.' });
+    }
     const result = await publishProject(p);
     res.render('published', { project: p, result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Admin's "Delete" button — drops the draft/pending project. We don't
+// allow deleting already-published rows (those would need to be
+// reverted via the static-site repo instead).
+router.post('/projects/:id/delete', (req, res, next) => {
+  try {
+    const p = getProject(Number(req.params.id));
+    if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (p.status === 'published') {
+      return res.status(409).render('error', {
+        message: 'Already-published projects can\'t be deleted from the dashboard. Remove the file from the mywindowwashing repo directly.',
+      });
+    }
+    deleteProject(p.id);
+    res.redirect('/');
   } catch (err) {
     next(err);
   }

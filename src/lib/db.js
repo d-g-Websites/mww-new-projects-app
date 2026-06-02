@@ -110,6 +110,14 @@ export function getProjectBySlug(slug) {
   return parseExtras(db.prepare('SELECT * FROM projects WHERE slug = ?').get(slug));
 }
 
+export function markPending(id) {
+  db.prepare(`
+    UPDATE projects
+       SET status = 'pending'
+     WHERE id = ?
+  `).run(id);
+}
+
 export function markPublished(id) {
   db.prepare(`
     UPDATE projects
@@ -119,6 +127,28 @@ export function markPublished(id) {
   `).run(id);
 }
 
+export function deleteProject(id) {
+  db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+}
+
+export function listPending({ limit = 50 } = {}) {
+  return db.prepare(`
+    SELECT * FROM projects
+     WHERE status = 'pending'
+     ORDER BY created_at DESC
+     LIMIT ?
+  `).all(limit).map(parseExtras);
+}
+
+export function listDrafts({ limit = 50 } = {}) {
+  return db.prepare(`
+    SELECT * FROM projects
+     WHERE status = 'draft'
+     ORDER BY created_at DESC
+     LIMIT ?
+  `).all(limit).map(parseExtras);
+}
+
 export function listPublished({ limit = 20, excludeId = null } = {}) {
   if (excludeId) {
     return db.prepare(`
@@ -126,14 +156,14 @@ export function listPublished({ limit = 20, excludeId = null } = {}) {
        WHERE status = 'published' AND id != ?
        ORDER BY published_at DESC
        LIMIT ?
-    `).all(excludeId, limit);
+    `).all(excludeId, limit).map(parseExtras);
   }
   return db.prepare(`
     SELECT * FROM projects
      WHERE status = 'published'
      ORDER BY published_at DESC
      LIMIT ?
-  `).all(limit);
+  `).all(limit).map(parseExtras);
 }
 
 // 3 most-recent published projects from a different city OR different service.

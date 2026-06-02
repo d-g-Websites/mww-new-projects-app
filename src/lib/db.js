@@ -57,6 +57,7 @@ ensureColumn('review_url', 'TEXT');    // Google / Yelp link if review text isn'
 ensureColumn('bullet_facts', 'TEXT');  // raw notes the tech typed (kept for narrative retries)
 ensureColumn('customer_note', 'TEXT');
 ensureColumn('street', 'TEXT');        // route (street name only, no house number) from Places
+ensureColumn('spoke_slug', 'TEXT');    // which spoke page to patch (differs from city_slug when nearest-spoke fallback fired)
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -73,19 +74,20 @@ export function insertDraft(row) {
       address, home_type, metric_value, metric_label, price, challenge,
       review_text, customer_name, review_date, review_url,
       narrative, before_photo, after_photo, extras, extra_photos,
-      bullet_facts, customer_note, street
+      bullet_facts, customer_note, street, spoke_slug
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date, @review_url,
       @narrative, @before_photo, @after_photo, @extras, @extra_photos,
-      @bullet_facts, @customer_note, @street
+      @bullet_facts, @customer_note, @street, @spoke_slug
     )
   `);
   const info = stmt.run({
     bullet_facts: null,
     customer_note: null,
     street: null,
+    spoke_slug: null,
     ...row,
     extras,
     extra_photos: extraPhotos,

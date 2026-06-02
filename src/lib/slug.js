@@ -52,45 +52,45 @@ export function getHub(key) {
   return loadCities().hubs[key];
 }
 
-// Take Google's locality string (e.g. "Highland Park") and return a
-// city object the page renders against. Strategy:
+// Take Google's locality string (e.g. "Highland Park") and figure out:
+//   - the city to DISPLAY on the page (URL slug, breadcrumb, H1 — always
+//     the actual customer city, even if it's a suburb we don't have a
+//     spoke page for),
+//   - which HUB to bind to (phone, schema parentOrganization, map),
+//   - and which SPOKE PAGE to patch with a "Recent Projects" tile.
 //
-//   1. If the locality is an existing spoke (e.g. "Highland Park",
-//      "Naperville") → use it directly.
-//   2. Otherwise — and this is the common case for any Chicago
-//      address (Google returns "Chicago", not the neighborhood) and
-//      for suburbs we don't have a spoke for (e.g. "Romeoville") —
-//      pick the geographically nearest spoke by lat/lng and ANCHOR
-//      THE PROJECT TO THAT SPOKE: its slug, its name, and its hub.
-//      The published URL, breadcrumb, and "Recent Projects" tile on
-//      the matched spoke page all reflect the nearest spoke. The
-//      real customer address is still stored on the project row,
-//      it's just internal — the public page is the SEO-anchored
-//      version pointing at a real spoke.
-//   3. If there are no coords (shouldn't happen since Places gives
-//      lat/lng), keep the literal city name and fall back to the
-//      Northbrook hub so the page still renders.
+// If the customer city is itself a spoke (e.g. "Highland Park"), all
+// three are the same.
 //
-// `originalLocality` is returned for diagnostics (the preview screen
-// can show "Bound to <spoke> based on this address" if we want it).
+// If it's not (e.g. "Romeoville", "Chicago"), the page still shows the
+// actual customer city — Google sees the real location, the page reads
+// naturally — but the hub + spoke patching follow the geographically
+// nearest spoke (Romeoville → Lemont spoke / Lisle hub).
+//
+// Returns:
+//   slug, name, hub      → for URL / page display / hub binding
+//   spokeSlug            → which spoke .html to patch on publish
+//   originalLocality     → kept for diagnostics
 export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'northbrook' } = {}) {
   if (!locality) return null;
   const slug = slugifyCity(locality);
   const known = getCity(slug);
-  if (known) return { ...known, source: 'cities.json' };
+  if (known) {
+    return { ...known, source: 'cities.json', spokeSlug: known.slug };
+  }
 
   if (lat != null && lng != null) {
     const nearest = findNearestCity(lat, lng);
     if (nearest) {
       return {
-        slug: nearest.slug,
-        name: nearest.name,
+        slug,
+        name: locality.trim(),
         hub:  nearest.hub,
-        lat:  nearest.lat,
-        lng:  nearest.lng,
-        source: 'nearest-by-coords',
-        originalLocality: locality.trim(),
+        spokeSlug: nearest.slug,
+        source: 'nearest-hub',
+        nearestSpokeName:     nearest.name,
         nearestDistanceMiles: nearest.distanceMiles,
+        originalLocality:     locality.trim(),
       };
     }
   }
@@ -98,6 +98,7 @@ export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'nor
     slug,
     name: locality.trim(),
     hub: fallbackHub,
+    spokeSlug: null,
     source: 'fallback-no-coords',
     originalLocality: locality.trim(),
   };

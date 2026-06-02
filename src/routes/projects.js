@@ -205,6 +205,7 @@ router.post('/new',
         bullet_facts: b.bullet_facts || null,
         customer_note: b.customer_note || null,
         street: b.street || null,
+        spoke_slug: city.spokeSlug || city.slug,
       });
 
       // Try Claude. If it fails, leave the placeholder in place and let

@@ -101,9 +101,11 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-hero h1 { color: #fff; font-size: 32px; font-weight: 800; line-height: 1.2; margin: 0 0 12px; }
 .proj-hero h1 span { color: #4caf50; }
 .proj-hero-sub { color: rgba(255,255,255,.75); font-size: 16px; line-height: 1.6; margin: 0; max-width: 600px; }
-.proj-stat-pill { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 20px 24px; text-align: center; min-width: 160px; }
+.proj-stat-pill { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 20px 24px; text-align: center; min-width: 170px; }
 .proj-stat-pill .stat-number { color: #4caf50; font-size: 32px; font-weight: 800; line-height: 1; display: block; margin-bottom: 4px; }
-.proj-stat-pill .stat-label { color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.proj-stat-pill .stat-label { color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; display: block; }
+.proj-stat-pill .stat-sub { color: rgba(255,255,255,.85); font-size: 13px; font-weight: 600; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12); display: block; }
+.proj-stat-pill .stat-price { color: #4caf50; font-size: 18px; font-weight: 800; margin-top: 6px; display: block; }
 
 /* ── STATS BAR ── */
 .proj-stats-bar { background: #133047; padding: 0 20px; }
@@ -346,6 +348,8 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
     <div class="proj-stat-pill">
       <span class="stat-number">{{metric.value}}</span>
       <span class="stat-label">{{metric.label}}</span>
+      {{#if serviceTypeLabel}}<span class="stat-sub">{{serviceTypeLabel}}</span>{{/if}}
+      {{#if priceLabel}}<span class="stat-price">{{priceLabel}}</span>{{/if}}
     </div>
     {{/if}}
   </div>
@@ -402,13 +406,21 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
       <span class="proj-stat-key">{{metric.label}}</span>
       <span class="proj-stat-val green">{{metric.statBar}}</span>
     </div>
+    {{#if serviceTypeLabel}}
+    <div class="proj-stat">
+      <span class="proj-stat-key">Service Type</span>
+      <span class="proj-stat-val">{{serviceTypeLabel}}</span>
+    </div>
+    {{/if}}
+    {{#if priceLabel}}
+    <div class="proj-stat">
+      <span class="proj-stat-key">Project Price</span>
+      <span class="proj-stat-val green">{{priceLabel}}</span>
+    </div>
+    {{/if}}
     <div class="proj-stat">
       <span class="proj-stat-key">Completed</span>
       <span class="proj-stat-val">{{dateLabel}}</span>
-    </div>
-    <div class="proj-stat">
-      <span class="proj-stat-key">Rating</span>
-      <span class="proj-stat-val green">5.0 ★</span>
     </div>
   </div>
 </div>

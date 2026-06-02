@@ -160,6 +160,11 @@ function buildView(project, opts = {}) {
     hooks: {
       serviceLevel: opts.serviceLevel || defaultServiceLevel(service.value),
     },
+    // Surface the window-cleaning service type ("In & Out" / "Out
+    // Only") next to the metric pill + in the stats bar. Empty for
+    // other services until they grow their own form extras.
+    serviceTypeLabel: (project.extras && project.extras.serviceType) || '',
+    priceLabel:       formatPriceLabel(project.price),
     heroSub,
     beforeAfterSub,
     beforeCaption,
@@ -274,6 +279,17 @@ function windowScopeTags(extras = {}) {
 
 function plur(n, singular) {
   return n === 1 ? singular : `${singular}s`;
+}
+
+// Normalize the price string the tech typed: accept "$290", "290",
+// "290.00" → render as "$290". Empty / non-numeric → empty so the
+// template hides the price element.
+function formatPriceLabel(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (s.startsWith('$')) return s;
+  if (/^\d+(\.\d+)?$/.test(s)) return `$${s}`;
+  return s;
 }
 
 // If the hub has a real Google Business Profile embed URL configured,

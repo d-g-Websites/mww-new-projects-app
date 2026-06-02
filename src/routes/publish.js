@@ -52,9 +52,14 @@ export async function publishProject(project) {
     }
   }
 
-  // 3. Patch the matching spoke page.
-  const spokeResult = updateSpokePage(siteRepo, project.city_slug, project);
-  const spokePath = join(siteRepo, `${project.city_slug}.html`);
+  // 3. Patch the matching spoke page. spoke_slug is what
+  //    resolveCityFromLocality picked as the nearest spoke — equals
+  //    city_slug when the city is itself a spoke, but differs when
+  //    the city has no spoke page (e.g. Romeoville → Lemont). Fall
+  //    back to city_slug for drafts created before spoke_slug existed.
+  const spokeToPatch = project.spoke_slug || project.city_slug;
+  const spokeResult = updateSpokePage(siteRepo, spokeToPatch, project);
+  const spokePath = join(siteRepo, `${spokeToPatch}.html`);
 
   // 4. Patch sitemap.xml.
   const today = new Date().toISOString().slice(0, 10);

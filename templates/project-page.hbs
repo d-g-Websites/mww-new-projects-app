@@ -351,6 +351,38 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   </div>
 </div>
 
+<!-- ═══ PROJECT NARRATIVE ═══ -->
+<div class="proj-section" style="background:#f5f8fa;">
+  <div class="proj-section-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;">
+    <div>
+      <div class="proj-section-label"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> About This Job</div>
+      <h2 class="proj-section-title" style="margin-bottom:20px;">What We Did</h2>
+      <div class="proj-narrative">
+        {{#each narrativeParagraphs}}
+        <p>{{this}}</p>
+        {{/each}}
+      </div>
+    </div>
+    <div>
+      <div class="proj-section-label" style="margin-top:4px;"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Services Performed</div>
+      <h2 class="proj-section-title" style="margin-bottom:20px;">Scope of Work</h2>
+      <div class="proj-service-tags">
+        {{#each serviceTags}}
+        <a href="../{{../service.servicePage}}" class="proj-service-tag"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>{{this}}</a>
+        {{/each}}
+      </div>
+      <div style="margin-top:32px;padding:20px;background:#fff;border-radius:12px;border:1px solid #e0e8f0;">
+        <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 6px;">Want a quote for your home?</p>
+        <p style="font-size:14px;color:#595959;margin:0 0 14px;">This property is served by our <a href="../{{hub.hubSlug}}" style="color:#133047;font-weight:600;">{{hub.name}} office</a>. Same-day and next-day appointments often available.</p>
+        <a href="tel:{{hub.phoneDigits}}" class="btn-cta-green" style="font-size:14px;padding:10px 20px;">
+          <svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.57.57 1 1 0 011 1V19a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1L6.6 10.8z"/></svg>
+          Call {{hub.phone}}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ STATS BAR ═══ -->
 <div class="proj-stats-bar">
   <div class="proj-stats-bar-inner">
@@ -420,37 +452,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 </div>
 {{/if}}
 
-<!-- ═══ PROJECT NARRATIVE ═══ -->
-<div class="proj-section" style="background:#f5f8fa;">
-  <div class="proj-section-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;">
-    <div>
-      <div class="proj-section-label"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> About This Job</div>
-      <h2 class="proj-section-title" style="margin-bottom:20px;">What We Did</h2>
-      <div class="proj-narrative">
-        {{#each narrativeParagraphs}}
-        <p>{{this}}</p>
-        {{/each}}
-      </div>
-    </div>
-    <div>
-      <div class="proj-section-label" style="margin-top:4px;"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Services Performed</div>
-      <h2 class="proj-section-title" style="margin-bottom:20px;">Scope of Work</h2>
-      <div class="proj-service-tags">
-        {{#each serviceTags}}
-        <a href="../{{../service.servicePage}}" class="proj-service-tag"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>{{this}}</a>
-        {{/each}}
-      </div>
-      <div style="margin-top:32px;padding:20px;background:#fff;border-radius:12px;border:1px solid #e0e8f0;">
-        <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 6px;">Want a quote for your home?</p>
-        <p style="font-size:14px;color:#595959;margin:0 0 14px;">This property is served by our <a href="../{{hub.hubSlug}}" style="color:#133047;font-weight:600;">{{hub.name}} office</a>. Same-day and next-day appointments often available.</p>
-        <a href="tel:{{hub.phoneDigits}}" class="btn-cta-green" style="font-size:14px;padding:10px 20px;">
-          <svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.57.57 1 1 0 011 1V19a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1L6.6 10.8z"/></svg>
-          Call {{hub.phone}}
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- ═══ PROJECT NARRATIVE moved up to sit right after the hero ═══ -->
 
 {{#if review.hasAny}}
 <!-- ═══ CUSTOMER REVIEW ═══ -->

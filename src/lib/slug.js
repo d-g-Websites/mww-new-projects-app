@@ -53,14 +53,26 @@ export function getHub(key) {
 }
 
 // Take Google's locality string (e.g. "Highland Park") and return a
-// city object. Strategy:
-//   1. If the locality matches a known spoke slug → use it as-is.
-//   2. Otherwise, if we have lat/lng for the picked address, pick the
-//      geographically nearest known city and inherit its hub. The slug
-//      stays the actual city name so URL + breadcrumbs reflect where
-//      the job happened, but the hub binding (phone, schema
-//      parentOrganization, map embed) follows the nearest spoke.
-//   3. Otherwise, fall back to Northbrook with the actual city name.
+// city object the page renders against. Strategy:
+//
+//   1. If the locality is an existing spoke (e.g. "Highland Park",
+//      "Naperville") → use it directly.
+//   2. Otherwise — and this is the common case for any Chicago
+//      address (Google returns "Chicago", not the neighborhood) and
+//      for suburbs we don't have a spoke for (e.g. "Romeoville") —
+//      pick the geographically nearest spoke by lat/lng and ANCHOR
+//      THE PROJECT TO THAT SPOKE: its slug, its name, and its hub.
+//      The published URL, breadcrumb, and "Recent Projects" tile on
+//      the matched spoke page all reflect the nearest spoke. The
+//      real customer address is still stored on the project row,
+//      it's just internal — the public page is the SEO-anchored
+//      version pointing at a real spoke.
+//   3. If there are no coords (shouldn't happen since Places gives
+//      lat/lng), keep the literal city name and fall back to the
+//      Northbrook hub so the page still renders.
+//
+// `originalLocality` is returned for diagnostics (the preview screen
+// can show "Bound to <spoke> based on this address" if we want it).
 export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'northbrook' } = {}) {
   if (!locality) return null;
   const slug = slugifyCity(locality);
@@ -71,11 +83,14 @@ export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'nor
     const nearest = findNearestCity(lat, lng);
     if (nearest) {
       return {
-        slug,
-        name: locality.trim(),
-        hub: nearest.hub,
-        source: `nearest:${nearest.slug}`,
-        nearestCity: { slug: nearest.slug, name: nearest.name, miles: nearest.distanceMiles },
+        slug: nearest.slug,
+        name: nearest.name,
+        hub:  nearest.hub,
+        lat:  nearest.lat,
+        lng:  nearest.lng,
+        source: 'nearest-by-coords',
+        originalLocality: locality.trim(),
+        nearestDistanceMiles: nearest.distanceMiles,
       };
     }
   }
@@ -83,7 +98,8 @@ export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'nor
     slug,
     name: locality.trim(),
     hub: fallbackHub,
-    source: 'fallback',
+    source: 'fallback-no-coords',
+    originalLocality: locality.trim(),
   };
 }
 

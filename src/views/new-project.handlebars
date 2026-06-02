@@ -19,6 +19,7 @@
       <strong id="resolved-line">—</strong>
     </div>
     <input type="hidden" name="address"  id="address-formatted" value="{{formValues.address}}">
+    <input type="hidden" name="street"   id="address-street"    value="{{formValues.street}}">
     <input type="hidden" name="city"     id="address-city"      value="{{formValues.city}}">
     <input type="hidden" name="state"    id="address-state"     value="{{formValues.state}}">
     <input type="hidden" name="zip"      id="address-zip"       value="{{formValues.zip}}">
@@ -141,10 +142,11 @@
     ac.addListener('place_changed', function () {
       var place = ac.getPlace();
       if (!place.address_components) return;
-      var city = '', state = '', zip = '';
+      var city = '', state = '', zip = '', street = '';
       for (var i = 0; i < place.address_components.length; i++) {
         var c = place.address_components[i];
-        if (c.types.indexOf('locality') !== -1) city = c.long_name;
+        if (c.types.indexOf('route') !== -1) street = c.long_name;
+        else if (c.types.indexOf('locality') !== -1) city = c.long_name;
         else if (!city && c.types.indexOf('sublocality') !== -1) city = c.long_name;
         else if (c.types.indexOf('administrative_area_level_1') !== -1) state = c.short_name;
         else if (c.types.indexOf('postal_code') !== -1) zip = c.long_name;
@@ -155,6 +157,7 @@
         lng = place.geometry.location.lng();
       }
       document.getElementById('address-formatted').value = place.formatted_address || '';
+      document.getElementById('address-street').value = street;
       document.getElementById('address-city').value = city;
       document.getElementById('address-state').value = state;
       document.getElementById('address-zip').value = zip;

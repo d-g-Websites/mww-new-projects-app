@@ -124,9 +124,10 @@ function buildView(project, opts = {}) {
   const metricVal  = project.metric_value || '';
   const metricLab  = project.metric_label || metricForService(service.value);
   const homeType   = project.home_type || 'Residential';
+  const streetPart = project.street ? ` on ${project.street}` : '';
 
   const heroSub = opts.heroSub
-    || `${service.label} at a ${homeType.toLowerCase()} in ${city.name}. ${metricVal ? metricVal + ' ' + metricLab.toLowerCase() + '. ' : ''}Completed by our ${hub.name} team.`;
+    || `${service.label} at a ${homeType.toLowerCase()} in ${city.name}${streetPart}. ${metricVal ? metricVal + ' ' + metricLab.toLowerCase() + '. ' : ''}Completed by our ${hub.name} team.`;
 
   const beforeCaption = opts.beforeCaption
     || `${homeType} in ${city.name}, IL before ${service.label.toLowerCase()} — grime and buildup visible from typical seasonal exposure.`;
@@ -180,7 +181,7 @@ function buildView(project, opts = {}) {
     customerName:    project.customer_name,
     customerInitial: initialOf(project.customer_name),
     narrativeParagraphs: parseNarrative(project.narrative),
-    serviceTags: defaultServiceTags(service.value),
+    serviceTags: scopeTagsFor(service.value, project.extras || {}),
     related,
     footerRecent,
     map: buildMap(hub),
@@ -227,10 +228,13 @@ function defaultServiceLevel(serviceVal) {
   return '';
 }
 
-function defaultServiceTags(serviceVal) {
-  if (serviceVal === 'window-cleaning') {
-    return ['Interior Window Cleaning', 'Exterior Window Cleaning', 'Screen Washing & Replacement', 'Frame & Track Cleaning'];
-  }
+// Window-cleaning gets its Scope of Work built from the actual extras
+// the tech ticked on the form — interior/exterior, the window types
+// present, and counted items like screens, storm windows, skylights,
+// window wells. Other services still use static defaults until they
+// grow their own service-specific form.
+function scopeTagsFor(serviceVal, extras) {
+  if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
   if (serviceVal === 'gutter-cleaning') {
     return ['Gutter Hand-Clearing', 'Downspout Flushing', 'Debris Bagging & Removal', 'Photo Documentation'];
   }
@@ -241,6 +245,35 @@ function defaultServiceTags(serviceVal) {
     return ['Deionized Water Rinse', 'Soft-Brush Wash', 'Panel Inspection', 'Edge Detailing'];
   }
   return [];
+}
+
+function windowScopeTags(extras = {}) {
+  const tags = [];
+  // Service type → which side(s) of the glass we cleaned.
+  const st = extras.serviceType;
+  if (st === 'Out Only') {
+    tags.push('Exterior Window Cleaning');
+  } else {
+    // Default to both when serviceType is missing (older drafts) or 'In & Out'.
+    tags.push('Interior Window Cleaning', 'Exterior Window Cleaning');
+  }
+  // Window types present.
+  if (Array.isArray(extras.windowTypes)) {
+    for (const wt of extras.windowTypes) {
+      tags.push(`${wt} Windows`);
+    }
+  }
+  // Counted extras. Skip anything that's 0 / missing.
+  if (extras.screens)      tags.push(`${extras.screens} ${plur(extras.screens, 'Screen')} Cleaned`);
+  if (extras.stormWindows) tags.push(`${extras.stormWindows} ${plur(extras.stormWindows, 'Storm Window')} Cleaned`);
+  if (extras.skylights)    tags.push(`${extras.skylights} ${plur(extras.skylights, 'Skylight')} Cleaned`);
+  if (extras.windowWells)  tags.push(`${extras.windowWells} ${plur(extras.windowWells, 'Window Well')} Cleaned`);
+  if (extras.tracksFrames) tags.push('Tracks & Frames Cleaned');
+  return tags;
+}
+
+function plur(n, singular) {
+  return n === 1 ? singular : `${singular}s`;
 }
 
 // If the hub has a real Google Business Profile embed URL configured,

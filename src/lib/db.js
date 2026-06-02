@@ -56,6 +56,7 @@ ensureColumn('extra_photos', 'TEXT');  // JSON array of full webp paths under tm
 ensureColumn('review_url', 'TEXT');    // Google / Yelp link if review text isn't pasted
 ensureColumn('bullet_facts', 'TEXT');  // raw notes the tech typed (kept for narrative retries)
 ensureColumn('customer_note', 'TEXT');
+ensureColumn('street', 'TEXT');        // route (street name only, no house number) from Places
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -72,18 +73,19 @@ export function insertDraft(row) {
       address, home_type, metric_value, metric_label, price, challenge,
       review_text, customer_name, review_date, review_url,
       narrative, before_photo, after_photo, extras, extra_photos,
-      bullet_facts, customer_note
+      bullet_facts, customer_note, street
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date, @review_url,
       @narrative, @before_photo, @after_photo, @extras, @extra_photos,
-      @bullet_facts, @customer_note
+      @bullet_facts, @customer_note, @street
     )
   `);
   const info = stmt.run({
     bullet_facts: null,
     customer_note: null,
+    street: null,
     ...row,
     extras,
     extra_photos: extraPhotos,

@@ -204,6 +204,7 @@ router.post('/new',
         extra_photos: extraOuts,
         bullet_facts: b.bullet_facts || null,
         customer_note: b.customer_note || null,
+        street: b.street || null,
       });
 
       // Try Claude. If it fails, leave the placeholder in place and let

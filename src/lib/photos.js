@@ -1,5 +1,6 @@
 import sharp from 'sharp';
-import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import heicConvert from 'heic-convert';
+import { mkdir, readFile, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 // SOP §7: 1200x800 .webp, deliberately sized for fast load + crisp on
@@ -8,9 +9,37 @@ import { join, dirname } from 'node:path';
 const TARGET_W = 1200;
 const TARGET_H = 800;
 
+// iPhones save HEIC by default. Sharp's prebuilt libvips includes a
+// HEIF container reader but ships without the HEVC decoder plugin
+// (patent reasons), so .heic files arrive as "No decoding plugin
+// installed for this compression format". Sniff the magic bytes and
+// run them through heic-convert (pure-JS WASM decoder) first.
+async function loadAsSharpableBuffer(srcPath) {
+  const buf = await readFile(srcPath);
+  if (isHeic(buf)) {
+    const jpeg = await heicConvert({
+      buffer: buf,
+      format: 'JPEG',
+      quality: 0.9,
+    });
+    return Buffer.from(jpeg);
+  }
+  return buf;
+}
+
+// HEIC / HEIF files start with an ISO BMFF "ftyp" box whose brand is
+// one of these. The brand sits at bytes 4-11.
+function isHeic(buf) {
+  if (buf.length < 12) return false;
+  if (buf.slice(4, 8).toString('ascii') !== 'ftyp') return false;
+  const brand = buf.slice(8, 12).toString('ascii');
+  return ['heic', 'heix', 'heim', 'heis', 'mif1', 'msf1', 'hevc', 'hevm', 'hevs', 'avif'].includes(brand);
+}
+
 export async function resizeToWebp(srcPath, destPath) {
   await mkdir(dirname(destPath), { recursive: true });
-  await sharp(srcPath)
+  const input = await loadAsSharpableBuffer(srcPath);
+  await sharp(input)
     .rotate() // honor EXIF orientation from phone cameras
     .resize(TARGET_W, TARGET_H, { fit: 'cover', position: 'centre' })
     .webp({ quality: 82 })

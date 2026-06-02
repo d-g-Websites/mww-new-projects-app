@@ -132,6 +132,19 @@ export function findNearestCity(lat, lng) {
   return best ? { ...best, distanceMiles: bestDist } : null;
 }
 
+// Return the N nearest cities to (lat, lng), excluding any slugs we
+// don't want in the list (e.g., the project's own city). Used to feed
+// the narrative model nearby-town context.
+export function findNearestCities(lat, lng, { count = 3, excludeSlugs = [] } = {}) {
+  if (lat == null || lng == null) return [];
+  const excluded = new Set(excludeSlugs);
+  const candidates = loadCities().cities
+    .filter(c => c.lat != null && c.lng != null && !excluded.has(c.slug))
+    .map(c => ({ ...c, distanceMiles: haversineMiles(lat, lng, c.lat, c.lng) }))
+    .sort((a, b) => a.distanceMiles - b.distanceMiles);
+  return candidates.slice(0, count);
+}
+
 // New URL pattern (per operational decision, overrides the SOP's "no
 // year in URL" rule):
 //   [service]-in-[city]-[mm-dd-yy]            e.g. window-cleaning-in-round-lake-beach-06-01-26

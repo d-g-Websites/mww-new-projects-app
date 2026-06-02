@@ -3,7 +3,7 @@ import multer from 'multer';
 import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
-import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality } from '../lib/slug.js';
+import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
 import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
 
@@ -206,7 +206,14 @@ router.post('/new',
         customer_note: b.customer_note || null,
         street: b.street || null,
         spoke_slug: city.spokeSlug || city.slug,
+        address_lat: lat,
+        address_lng: lng,
       });
+
+      const nearbyTowns = findNearestCities(lat, lng, {
+        count: 3,
+        excludeSlugs: [city.slug, city.spokeSlug].filter(Boolean),
+      }).map(c => c.name);
 
       // Try Claude. If it fails, leave the placeholder in place and let
       // the tech retry from the preview page.
@@ -220,6 +227,7 @@ router.post('/new',
           bulletFacts:  b.bullet_facts,
           customerNote: b.customer_note,
           extras,
+          nearbyTowns,
         });
         updateDraft(id, { narrative: paragraphs.join('\n\n') });
       } catch (err) {
@@ -244,6 +252,11 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
     if (p.status === 'published') {
       return res.status(409).render('error', { message: 'Already published — cannot regenerate.' });
     }
+    const nearbyTowns = findNearestCities(p.address_lat, p.address_lng, {
+      count: 3,
+      excludeSlugs: [p.city_slug, p.spoke_slug].filter(Boolean),
+    }).map(c => c.name);
+
     const paragraphs = await generateNarrative({
       service:  p.service_label,
       city:     `${p.city_name}, IL`,
@@ -253,6 +266,7 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
       bulletFacts:  p.bullet_facts,
       customerNote: p.customer_note,
       extras:       p.extras,
+      nearbyTowns,
     });
     updateDraft(p.id, { narrative: paragraphs.join('\n\n') });
     res.redirect(`/projects/${p.id}/preview`);

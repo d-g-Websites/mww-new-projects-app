@@ -58,6 +58,8 @@ ensureColumn('bullet_facts', 'TEXT');  // raw notes the tech typed (kept for nar
 ensureColumn('customer_note', 'TEXT');
 ensureColumn('street', 'TEXT');        // route (street name only, no house number) from Places
 ensureColumn('spoke_slug', 'TEXT');    // which spoke page to patch (differs from city_slug when nearest-spoke fallback fired)
+ensureColumn('address_lat', 'REAL');   // job address lat/lng from Google Places, for nearby-town context
+ensureColumn('address_lng', 'REAL');
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -74,13 +76,15 @@ export function insertDraft(row) {
       address, home_type, metric_value, metric_label, price, challenge,
       review_text, customer_name, review_date, review_url,
       narrative, before_photo, after_photo, extras, extra_photos,
-      bullet_facts, customer_note, street, spoke_slug
+      bullet_facts, customer_note, street, spoke_slug,
+      address_lat, address_lng
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date, @review_url,
       @narrative, @before_photo, @after_photo, @extras, @extra_photos,
-      @bullet_facts, @customer_note, @street, @spoke_slug
+      @bullet_facts, @customer_note, @street, @spoke_slug,
+      @address_lat, @address_lng
     )
   `);
   const info = stmt.run({
@@ -88,6 +92,8 @@ export function insertDraft(row) {
     customer_note: null,
     street: null,
     spoke_slug: null,
+    address_lat: null,
+    address_lng: null,
     ...row,
     extras,
     extra_photos: extraPhotos,

@@ -105,8 +105,17 @@ function reviewPlatform(url) {
 // Map a project row → the {{view}} the Handlebars template expects.
 function buildView(project, opts = {}) {
   const service = getService(project.service);
-  const city    = getCity(project.city_slug);
-  const hub     = getHub(project.hub);
+  // If the address city has its own spoke page, use the rich record
+  // from cities.json (canonical name, lat/lng, etc.). Otherwise fall
+  // back to the columns we stored on the project itself — the
+  // resolver still picked a hub for it, so the page just won't have
+  // a matching spoke to patch (which is correct behavior).
+  const city = getCity(project.city_slug) || {
+    slug: project.city_slug,
+    name: project.city_name,
+    hub:  project.hub,
+  };
+  const hub = getHub(project.hub);
   if (!service || !city || !hub) {
     throw new Error(`Missing service/city/hub: ${project.service}/${project.city_slug}/${project.hub}`);
   }

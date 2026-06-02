@@ -53,6 +53,7 @@ function ensureColumn(name, decl) {
 }
 ensureColumn('extras', 'TEXT');
 ensureColumn('extra_photos', 'TEXT');  // JSON array of full webp paths under tmp/staged
+ensureColumn('review_url', 'TEXT');    // Google / Yelp link if review text isn't pasted
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -67,12 +68,12 @@ export function insertDraft(row) {
     INSERT INTO projects (
       slug, service, service_label, city_slug, city_name, hub,
       address, home_type, metric_value, metric_label, price, challenge,
-      review_text, customer_name, review_date,
+      review_text, customer_name, review_date, review_url,
       narrative, before_photo, after_photo, extras, extra_photos
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
-      @review_text, @customer_name, @review_date,
+      @review_text, @customer_name, @review_date, @review_url,
       @narrative, @before_photo, @after_photo, @extras, @extra_photos
     )
   `);

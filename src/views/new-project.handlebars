@@ -76,15 +76,16 @@
   </div>
 
   <div class="card">
-    <h2>4. Customer review</h2>
+    <h2>4. Customer review <small style="color:#8a9db0;font-weight:400;font-size:13px;">(optional — add later)</small></h2>
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Leave blank if the customer hasn't reviewed yet. You can add it later. If you have their Google or Yelp review link, paste it here.</p>
     <div class="field">
       <label for="customer_name">Customer name</label>
-      <input id="customer_name" name="customer_name" value="{{formValues.customer_name}}" required>
+      <input id="customer_name" name="customer_name" value="{{formValues.customer_name}}" placeholder="e.g. Gregory M.">
     </div>
     <div class="field">
-      <label for="review_text">Review text (paste exactly)</label>
-      <textarea id="review_text" name="review_text" rows="5" required>{{formValues.review_text}}</textarea>
-      <small>Do not paraphrase — paste the customer's words as written.</small>
+      <label for="review_url">Review link (Google or Yelp)</label>
+      <input id="review_url" name="review_url" type="url" value="{{formValues.review_url}}" placeholder="https://maps.app.goo.gl/… or https://yelp.com/…">
+      <small>We'll show a "Read full review" button on the project page. Leave blank if no review yet.</small>
     </div>
   </div>
 

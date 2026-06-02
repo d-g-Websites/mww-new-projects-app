@@ -452,30 +452,47 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   </div>
 </div>
 
+{{#if review.hasAny}}
 <!-- ═══ CUSTOMER REVIEW ═══ -->
 <div class="proj-section" style="background:#fff;">
   <div class="proj-section-inner">
     <div class="proj-section-label" style="margin:0 auto 16px;display:table;"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Customer Review</div>
+
+    {{#if review.hasText}}
     <div class="proj-review-card">
       <div class="proj-review-stars">★★★★★</div>
-      <p class="proj-review-text">"{{reviewText}}"</p>
+      <p class="proj-review-text">"{{review.text}}"</p>
       <div class="proj-review-author">
-        <div class="proj-review-avatar">{{customerInitial}}</div>
+        <div class="proj-review-avatar">{{review.initial}}</div>
         <div>
-          <div class="proj-review-name">{{customerName}}</div>
+          <div class="proj-review-name">{{review.customerName}}</div>
           <div class="proj-review-meta">
             <span>{{city.name}}, IL · {{dateLabel}}</span>
+            {{#if review.url}}
             &nbsp;·&nbsp;
-            <span class="google-badge">
+            <a href="{{review.url}}" target="_blank" rel="noopener" class="google-badge" style="text-decoration:none;">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M12 11h8.533C20.8 11.533 21 12.227 21 13c0 4.418-2.985 7-7.5 7-4.142 0-7.5-3.358-7.5-7.5S9.358 5 13.5 5c1.8 0 3.45.633 4.733 1.667L16.5 8.4C15.6 7.533 14.6 7 13.5 7 10.467 7 8 9.467 8 12.5S10.467 18 13.5 18c2.55 0 4.35-1.4 4.9-3.5H12V11z" fill="#4285F4"/></svg>
-              Verified Google Review
-            </span>
+              Verified on {{review.platform}}
+            </a>
+            {{/if}}
           </div>
         </div>
       </div>
     </div>
+    {{else}}
+    <!-- Review URL only — show a clear CTA to read on the source platform -->
+    <div class="proj-review-card" style="text-align:center;">
+      <div class="proj-review-stars">★★★★★</div>
+      <p style="font-size:16px;color:#133047;margin:0 0 22px;">{{#if review.customerName}}{{review.customerName}} left a 5-star review for this project.{{else}}This project earned a 5-star review.{{/if}}</p>
+      <a href="{{review.url}}" target="_blank" rel="noopener" class="btn-cta-green" style="font-size:15px;padding:12px 24px;">
+        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Read full review on {{review.platform}}
+      </a>
+    </div>
+    {{/if}}
   </div>
 </div>
+{{/if}}
 
 <!-- ═══ INTERNAL LINKS ═══ -->
 <div class="proj-section" style="background:#f5f8fa;">

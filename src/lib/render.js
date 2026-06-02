@@ -28,8 +28,11 @@ function monthYear(isoDate) {
 }
 
 // Build the JSON-LD @graph the SOP requires (Service, Breadcrumb,
-// Review, two ImageObjects). Stored as a raw string so the template
-// emits it inside the <script> tag without HTML-escaping.
+// optionally Review, two ImageObjects). Stored as a raw string so the
+// template emits it inside the <script> tag without HTML-escaping.
+// The Review block is included only when we have BOTH a customer name
+// and review body — Google rejects schema Review blocks missing
+// either, so a URL-only "read on Google" entry doesn't qualify.
 function buildSchema(p, service, city, hub) {
   const canonical = `${SITE_ROOT}/projects/${p.slug}`;
   const beforeUrl = `${SITE_ROOT}/projects/img/${p.slug}-before.webp`;
@@ -57,7 +60,9 @@ function buildSchema(p, service, city, hub) {
         { '@type': 'ListItem', position: 3, name: `${service.label} — ${city.name}, IL`, item: canonical },
       ],
     },
-    {
+  ];
+  if (p.customer_name && p.review_text) {
+    graph.push({
       '@type': 'Review',
       '@id': `${canonical}#review`,
       author:        { '@type': 'Person', name: p.customer_name },
@@ -65,7 +70,9 @@ function buildSchema(p, service, city, hub) {
       reviewBody:    p.review_text,
       reviewRating:  { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
       itemReviewed:  { '@id': hub.parentOrgUrl },
-    },
+    });
+  }
+  graph.push(
     {
       '@type': 'ImageObject',
       name: `${service.label} before — ${city.name} IL ${p.home_type || ''}`.trim(),
@@ -78,8 +85,21 @@ function buildSchema(p, service, city, hub) {
       url: afterUrl,
       description: p.afterCaption,
     },
-  ];
+  );
   return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2);
+}
+
+// Detect Google vs Yelp from the URL so the "Read full review" button
+// has the right label + brand color.
+function reviewPlatform(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.host.toLowerCase();
+    if (/(^|\.)google\./.test(host) || /goo\.gl|g\.page|maps\.app\.goo\.gl/.test(host)) return 'Google';
+    if (/(^|\.)yelp\./.test(host) || /yelp\.to/.test(host)) return 'Yelp';
+    return 'External';
+  } catch { return null; }
 }
 
 // Map a project row → the {{view}} the Handlebars template expects.
@@ -136,6 +156,17 @@ function buildView(project, opts = {}) {
     afterCaption,
     beforeAlt: `${service.label} before — ${city.name} IL ${homeType.toLowerCase()}`,
     afterAlt:  `${service.label} after — ${city.name} IL ${homeType.toLowerCase()}`,
+    review: {
+      hasText:     !!(project.customer_name && project.review_text),
+      hasUrl:      !!project.review_url,
+      hasAny:      !!(project.customer_name || project.review_text || project.review_url),
+      text:        project.review_text,
+      customerName: project.customer_name,
+      initial:     initialOf(project.customer_name),
+      url:         project.review_url,
+      platform:    reviewPlatform(project.review_url),
+    },
+    // Kept for backwards-compat with anything that read these directly.
     reviewText:      project.review_text,
     customerName:    project.customer_name,
     customerInitial: initialOf(project.customer_name),

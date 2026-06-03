@@ -125,7 +125,9 @@ function formatExtras(extras) {
   if (extras.tracksFrames) lines.push(`- Tracks and frames wiped down`);
 
   // Gutter-cleaning fields
-  if (extras.sqFootage)        lines.push(`- Approximate home footprint: ${extras.sqFootage} sq ft`);
+  if (extras.sqFootage && !extras.surfaces) {
+    lines.push(`- Approximate home footprint: ${extras.sqFootage} sq ft`);
+  }
   if (extras.gutterGuards)     lines.push(`- Gutter guards involved`);
   if (extras.roofCleaning)     lines.push(`- Roof cleaning included`);
   if (extras.gutterRepairs) {
@@ -136,6 +138,41 @@ function formatExtras(extras) {
   if (extras.extraWideGutters) lines.push(`- Extra-wide gutters on this property`);
   if (extras.cloggedElbows)    lines.push(`- Clogged elbows that needed clearing`);
   if (extras.undergroundClogs) lines.push(`- Underground drain clogs that needed clearing`);
+
+  // Power-washing fields. Surfaces ticked + their materials so the
+  // narrative can name each one specifically rather than generalizing.
+  if (extras.surfaces) {
+    const s = extras.surfaces;
+    if (s.house) {
+      const story = extras.houseStories ? `${extras.houseStories}-story ` : '';
+      const mats  = Array.isArray(extras.houseMaterials) && extras.houseMaterials.length
+        ? ` (${extras.houseMaterials.join(', ')})` : '';
+      lines.push(`- ${story}House washed${mats}`);
+    }
+    if (s.deck) {
+      const mats = Array.isArray(extras.deckMaterials) && extras.deckMaterials.length
+        ? ` (${extras.deckMaterials.join(', ')})` : '';
+      lines.push(`- Deck washed${mats}`);
+    }
+    if (s.patio) {
+      const mats = Array.isArray(extras.patioMaterials) && extras.patioMaterials.length
+        ? ` (${extras.patioMaterials.join(', ')})` : '';
+      lines.push(`- Patio washed${mats}`);
+    }
+    if (s.driveway) {
+      const mats = Array.isArray(extras.drivewayMaterials) && extras.drivewayMaterials.length
+        ? ` (${extras.drivewayMaterials.join(', ')})` : '';
+      lines.push(`- Driveway washed${mats}`);
+    }
+    if (s.walkways) {
+      const mats = Array.isArray(extras.walkwaysMaterials) && extras.walkwaysMaterials.length
+        ? ` (${extras.walkwaysMaterials.join(', ')})` : '';
+      lines.push(`- Walkways washed${mats}`);
+    }
+    if (s.playset)          lines.push(`- Playset washed`);
+    if (s.outdoorFurniture) lines.push(`- Outdoor furniture washed`);
+    if (extras.sqFootage)   lines.push(`- Approximate area cleaned: ${extras.sqFootage} sq ft`);
+  }
 
   return lines.length ? '\nExtras:\n' + lines.join('\n') + '\n' : '';
 }

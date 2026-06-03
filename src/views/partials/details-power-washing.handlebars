@@ -2,63 +2,102 @@
   <h2>2. Details</h2>
 
   <div class="field">
-    <label for="home_type">Home type</label>
-    <select id="home_type" name="home_type" required>
-      <option value="">Select…</option>
-      <option value="1-Story House"  {{#if (eq formValues.home_type "1-Story House")}}selected{{/if}}>1-story house</option>
-      <option value="2-Story House"  {{#if (eq formValues.home_type "2-Story House")}}selected{{/if}}>2-story house</option>
-      <option value="3-Story House"  {{#if (eq formValues.home_type "3-Story House")}}selected{{/if}}>3-story house</option>
-    </select>
-  </div>
-
-  <div class="field">
-    <label for="metric_value">How many windows cleaned?</label>
-    <input id="metric_value" name="metric_value" type="number" min="1" inputmode="numeric"
-           value="{{formValues.metric_value}}" placeholder="24" required>
-  </div>
-  <input type="hidden" name="metric_label" value="Windows Cleaned">
-
-  <div class="field">
-    <label for="service_type">Service type</label>
-    <select id="service_type" name="service_type" required>
-      <option value="">Select…</option>
-      <option value="In &amp; Out" {{#if (eq formValues.service_type "In & Out")}}selected{{/if}}>In &amp; Out</option>
-      <option value="Out Only"    {{#if (eq formValues.service_type "Out Only")}}selected{{/if}}>Out only</option>
-    </select>
-  </div>
-
-  <div class="field">
-    <label>Window type (check all that apply)</label>
+    <label>What was cleaned? <small style="color:#8a9db0;font-weight:400;">(check all that apply)</small></label>
     <div class="check-grid">
+
+      {{!-- House — with story count + material sub-checkboxes --}}
+      <div class="check-row has-subs {{#if formValues.surface_house}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_house" value="yes" {{#if formValues.surface_house}}checked{{/if}}>
+          <span>House</span>
+        </label>
+        <div class="sub-grid">
+          <div class="sub-field">
+            <label>Stories:</label>
+            <select name="house_stories">
+              <option value="">Select…</option>
+              <option value="1" {{#if (eq formValues.house_stories "1")}}selected{{/if}}>1 story</option>
+              <option value="2" {{#if (eq formValues.house_stories "2")}}selected{{/if}}>2 story</option>
+              <option value="3" {{#if (eq formValues.house_stories "3")}}selected{{/if}}>3 story</option>
+            </select>
+          </div>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Vinyl Siding"   {{#if (includes formValues.house_materials "Vinyl Siding")}}checked{{/if}}><span>Vinyl siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Wood Siding"    {{#if (includes formValues.house_materials "Wood Siding")}}checked{{/if}}><span>Wood siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Aluminum Siding"{{#if (includes formValues.house_materials "Aluminum Siding")}}checked{{/if}}><span>Aluminum siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Brick"          {{#if (includes formValues.house_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Stone"          {{#if (includes formValues.house_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
+      {{!-- Deck --}}
+      <div class="check-row has-subs {{#if formValues.surface_deck}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_deck" value="yes" {{#if formValues.surface_deck}}checked{{/if}}>
+          <span>Deck</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="deck_materials" value="Wood"            {{#if (includes formValues.deck_materials "Wood")}}checked{{/if}}><span>Wood</span></label>
+          <label class="sub-check"><input type="checkbox" name="deck_materials" value="Engineered TREX" {{#if (includes formValues.deck_materials "Engineered TREX")}}checked{{/if}}><span>Engineered TREX</span></label>
+        </div>
+      </div>
+
+      {{!-- Patio --}}
+      <div class="check-row has-subs {{#if formValues.surface_patio}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_patio" value="yes" {{#if formValues.surface_patio}}checked{{/if}}>
+          <span>Patio</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Brick Pavers" {{#if (includes formValues.patio_materials "Brick Pavers")}}checked{{/if}}><span>Brick pavers</span></label>
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Concrete"     {{#if (includes formValues.patio_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Stones"       {{#if (includes formValues.patio_materials "Stones")}}checked{{/if}}><span>Stones</span></label>
+        </div>
+      </div>
+
+      {{!-- Driveway --}}
+      <div class="check-row has-subs {{#if formValues.surface_driveway}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_driveway" value="yes" {{#if formValues.surface_driveway}}checked{{/if}}>
+          <span>Driveway</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Concrete" {{#if (includes formValues.driveway_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Asphalt"  {{#if (includes formValues.driveway_materials "Asphalt")}}checked{{/if}}><span>Asphalt</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Brick"    {{#if (includes formValues.driveway_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Stone"    {{#if (includes formValues.driveway_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
+      {{!-- Walkways --}}
+      <div class="check-row has-subs {{#if formValues.surface_walkways}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_walkways" value="yes" {{#if formValues.surface_walkways}}checked{{/if}}>
+          <span>Walkways</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Concrete" {{#if (includes formValues.walkways_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Brick"    {{#if (includes formValues.walkways_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Stone"    {{#if (includes formValues.walkways_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
       <label class="check-row">
-        <input type="checkbox" name="window_types" value="French Style"   {{#if (includes formValues.window_types "French Style")}}checked{{/if}}>
-        <span>French style windows</span>
+        <input type="checkbox" name="surface_playset" value="yes" {{#if formValues.surface_playset}}checked{{/if}}>
+        <span>Playset</span>
       </label>
       <label class="check-row">
-        <input type="checkbox" name="window_types" value="Double Hung"    {{#if (includes formValues.window_types "Double Hung")}}checked{{/if}}>
-        <span>Double-hung windows</span>
-      </label>
-      <label class="check-row">
-        <input type="checkbox" name="window_types" value="Casement"       {{#if (includes formValues.window_types "Casement")}}checked{{/if}}>
-        <span>Casement windows</span>
+        <input type="checkbox" name="surface_outdoor_furniture" value="yes" {{#if formValues.surface_outdoor_furniture}}checked{{/if}}>
+        <span>Outdoor furniture</span>
       </label>
     </div>
   </div>
 
   <div class="field">
-    <label>Extras (check what was included, then enter count)</label>
-    <div class="check-grid">
-      {{> extra-count-checkbox name="screens"        label="Screens"        formValues=formValues}}
-      {{> extra-count-checkbox name="storm_windows"  label="Storm windows"  formValues=formValues}}
-      {{> extra-count-checkbox name="skylights"      label="Skylights"      formValues=formValues}}
-      {{> extra-count-checkbox name="window_wells"   label="Window wells"   formValues=formValues}}
-
-      <label class="check-row">
-        <input type="checkbox" name="tracks_frames" value="yes" {{#if formValues.tracks_frames}}checked{{/if}}>
-        <span>Tracks &amp; frames</span>
-      </label>
-    </div>
+    <label for="metric_value">Approximate sq footage <small style="color:#8a9db0;font-weight:400;">(optional)</small></label>
+    <input id="metric_value" name="metric_value" type="number" min="0" inputmode="numeric"
+           value="{{formValues.metric_value}}" placeholder="e.g. 2400">
   </div>
+  <input type="hidden" name="metric_label" value="Sq Ft">
 
   <div class="field">
     <label for="price">Price</label>
@@ -73,8 +112,9 @@
 </div>
 
 <script>
-  // Toggle the "how many" input next to each checkbox-with-count.
-  document.querySelectorAll('.check-row.has-count').forEach(function (row) {
+  // Toggle .is-checked on parent rows for .has-count / .has-subs /
+  // .has-text the same way the other partials do.
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs').forEach(function (row) {
     var box = row.querySelector('input[type="checkbox"]');
     function sync() {
       row.classList.toggle('is-checked', box.checked);

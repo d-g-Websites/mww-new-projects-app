@@ -150,10 +150,7 @@ function collectExtras(serviceValue, b) {
   const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
   const challenges = arr(b.challenges);
 
-  if (serviceValue === 'window-cleaning' || serviceValue === 'power-washing') {
-    // Power-washing currently uses the same shape as window-cleaning;
-    // the field names will get renamed and the schema will diverge
-    // when we tailor the power-washing form.
+  if (serviceValue === 'window-cleaning') {
     return {
       serviceType:  b.service_type || null,
       windowTypes:  arr(b.window_types),
@@ -162,6 +159,28 @@ function collectExtras(serviceValue, b) {
       skylights:     b.skylights      ? intOrNull(b.skylights_count)      : null,
       windowWells:   b.window_wells   ? intOrNull(b.window_wells_count)   : null,
       tracksFrames:  !!b.tracks_frames,
+      challenges,
+    };
+  }
+
+  if (serviceValue === 'power-washing') {
+    return {
+      surfaces: {
+        house:            !!b.surface_house,
+        deck:             !!b.surface_deck,
+        patio:            !!b.surface_patio,
+        driveway:         !!b.surface_driveway,
+        walkways:         !!b.surface_walkways,
+        playset:          !!b.surface_playset,
+        outdoorFurniture: !!b.surface_outdoor_furniture,
+      },
+      houseStories:      b.surface_house    ? (b.house_stories || null) : null,
+      houseMaterials:    b.surface_house    ? arr(b.house_materials)    : [],
+      deckMaterials:     b.surface_deck     ? arr(b.deck_materials)     : [],
+      patioMaterials:    b.surface_patio    ? arr(b.patio_materials)    : [],
+      drivewayMaterials: b.surface_driveway ? arr(b.driveway_materials) : [],
+      walkwaysMaterials: b.surface_walkways ? arr(b.walkways_materials) : [],
+      sqFootage:         intOrNull(b.metric_value),
       challenges,
     };
   }
@@ -286,6 +305,18 @@ router.post('/new',
       }
 
       const extras = collectExtras(service.value, b);
+      // For power-washing the form has no "Home type" dropdown.
+      // Derive a reasonable home_type from what was checked so the
+      // hero subtitle + stats bar + narrative all read naturally.
+      if (service.value === 'power-washing') {
+        if (b.surface_house && b.house_stories) {
+          b.home_type = `${b.house_stories}-Story House`;
+        } else if (b.surface_house) {
+          b.home_type = 'House';
+        } else {
+          b.home_type = 'Property';
+        }
+      }
 
       // Save the draft NOW, before the narrative call. If Claude times
       // out, the tech doesn't lose anything — they can resume from the

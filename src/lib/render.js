@@ -353,13 +353,45 @@ function defaultServiceLevel(serviceVal) {
 function scopeTagsFor(serviceVal, extras) {
   if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
   if (serviceVal === 'gutter-cleaning') return gutterScopeTags(extras);
-  // Power-washing starts as a clone of window-cleaning's logic until
-  // we tailor its form (surface types, soft-vs-pressure split, etc.).
-  if (serviceVal === 'power-washing')   return windowScopeTags(extras);
+  if (serviceVal === 'power-washing')   return powerScopeTags(extras);
   if (serviceVal === 'solar-panel-cleaning') {
     return ['Deionized Water Rinse', 'Soft-Brush Wash', 'Panel Inspection', 'Edge Detailing'];
   }
   return [];
+}
+
+function powerScopeTags(extras = {}) {
+  const tags = [];
+  const s = extras.surfaces || {};
+  if (s.house) {
+    tags.push('House Wash');
+    if (Array.isArray(extras.houseMaterials)) tags.push(...extras.houseMaterials);
+  }
+  if (s.deck) {
+    tags.push('Deck Wash');
+    if (Array.isArray(extras.deckMaterials)) {
+      for (const m of extras.deckMaterials) tags.push(`${m} Deck`);
+    }
+  }
+  if (s.patio) {
+    tags.push('Patio Wash');
+    if (Array.isArray(extras.patioMaterials)) tags.push(...extras.patioMaterials);
+  }
+  if (s.driveway) {
+    tags.push('Driveway Wash');
+    if (Array.isArray(extras.drivewayMaterials)) {
+      for (const m of extras.drivewayMaterials) tags.push(`${m} Driveway`);
+    }
+  }
+  if (s.walkways) {
+    tags.push('Walkway Wash');
+    if (Array.isArray(extras.walkwaysMaterials)) {
+      for (const m of extras.walkwaysMaterials) tags.push(`${m} Walkway`);
+    }
+  }
+  if (s.playset)          tags.push('Playset Wash');
+  if (s.outdoorFurniture) tags.push('Outdoor Furniture Wash');
+  return tags;
 }
 
 function gutterScopeTags(extras = {}) {

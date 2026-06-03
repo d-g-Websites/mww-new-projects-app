@@ -21,6 +21,22 @@
 </div>
 
 <div class="card">
+  <h2>FAQ <small style="color:#8a9db0;font-weight:400;font-size:13px;">({{project.faq.length}} {{#if (eq project.faq.length 1)}}question{{else}}questions{{/if}})</small></h2>
+  {{#if faqEmpty}}
+  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:12px;">
+    <strong>FAQ didn't generate.</strong> Click below to retry, or publish without it — the section will just be hidden on the live page.
+  </div>
+  {{else}}
+  <ul class="list" style="font-size:14px;">
+    {{#each project.faq}}<li><strong>{{q}}</strong><br><span class="muted" style="font-size:13px;">{{a}}</span></li>{{/each}}
+  </ul>
+  {{/if}}
+  <form method="post" action="/projects/{{project.id}}/regenerate-faq" style="margin-top:10px;">
+    <button type="submit" class="btn btn-outline">Regenerate FAQ</button>
+  </form>
+</div>
+
+<div class="card">
   <h2>Preview the page</h2>
   <iframe src="/projects/{{project.id}}/preview/iframe" style="width:100%;height:600px;border:1px solid #cfd8dc;border-radius:8px;"></iframe>
   <p class="muted" style="margin-top:8px;">Photos will 404 in this preview — they're not on the live site yet. They'll appear once the project is published.</p>

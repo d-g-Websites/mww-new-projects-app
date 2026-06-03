@@ -61,6 +61,7 @@ ensureColumn('spoke_slug', 'TEXT');    // which spoke page to patch (differs fro
 ensureColumn('address_lat', 'REAL');   // job address lat/lng from Google Places, for nearby-town context
 ensureColumn('address_lng', 'REAL');
 ensureColumn('video_url', 'TEXT');     // optional YouTube / Vimeo URL the tech pastes
+ensureColumn('faq', 'TEXT');           // JSON array of {q, a} pairs for FAQPage schema + on-page section
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -110,6 +111,7 @@ export function parseExtras(row) {
   const out = { ...row };
   out.extras = row.extras ? safeParse(row.extras, {}) : {};
   out.extra_photos = row.extra_photos ? safeParse(row.extra_photos, []) : [];
+  out.faq = row.faq ? safeParse(row.faq, []) : [];
   return out;
 }
 

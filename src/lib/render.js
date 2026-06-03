@@ -174,6 +174,21 @@ function buildSchema(p, service, city, hub) {
     graph.push(videoBlock);
   }
 
+  if (Array.isArray(p.faq) && p.faq.length) {
+    graph.push({
+      '@type': 'FAQPage',
+      '@id':   `${canonical}#faqpage`,
+      mainEntity: p.faq.map(({ q, a }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: a,
+        },
+      })),
+    });
+  }
+
   if (p.customer_name && p.review_text) {
     graph.push({
       '@type': 'Review',
@@ -291,6 +306,7 @@ function buildView(project, opts = {}) {
     footerRecent,
     map: buildMap(hub),
     video: buildVideo(project, service, city, hub, homeType, metricVal, metricLab),
+    faq:   Array.isArray(project.faq) ? project.faq : [],
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
     gallery:   galleryFilenames(project),
@@ -317,6 +333,7 @@ function buildView(project, opts = {}) {
       seoTitle:       view.seo.title,
       seoDescription: view.seo.description,
       video:          view.video,
+      faq:            view.faq,
     },
     service, city, hub
   );

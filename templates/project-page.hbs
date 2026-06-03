@@ -124,6 +124,15 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-section-title { color: #133047; font-size: 26px; font-weight: 700; margin: 0 0 8px; line-height: 1.25; }
 .proj-section-sub { color: #595959; font-size: 16px; margin: 0 0 36px; }
 
+/* ── FAQ ── */
+.proj-faq { display: flex; flex-direction: column; gap: 12px; max-width: 860px; margin: 0 auto; }
+.proj-faq-item { background: #fff; border: 1px solid #e0e8f0; border-radius: 12px; padding: 18px 22px; box-shadow: 0 2px 8px rgba(19,48,71,.04); }
+.proj-faq-item summary { font-size: 16px; font-weight: 700; color: #133047; list-style: none; position: relative; padding-right: 36px; cursor: pointer; line-height: 1.4; outline: none; }
+.proj-faq-item summary::-webkit-details-marker { display: none; }
+.proj-faq-item summary::after { content: '+'; position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: 24px; color: #4caf50; font-weight: 700; line-height: 1; transition: transform .2s; }
+.proj-faq-item[open] summary::after { content: '−'; }
+.proj-faq-item p { margin: 14px 0 0; line-height: 1.7; color: #595959; font-size: 15px; }
+
 /* ── VIDEO SECTION ── */
 .proj-video-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center; }
 .proj-video-frame { position: relative; width: 100%; padding-top: 56.25%; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(19,48,71,.12); background: #000; }
@@ -628,6 +637,25 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
         allowfullscreen="" loading="lazy"
         referrerpolicy="no-referrer-when-downgrade"
         title="{{hub.name}} office location"></iframe>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+{{#if faq.length}}
+<!-- ═══ FAQ ═══ -->
+<div class="proj-section" style="background:#f5f8fa;">
+  <div class="proj-section-inner">
+    <div class="proj-section-label" style="margin:0 auto 16px;display:table;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></svg> Q&amp;A</div>
+    <h2 class="proj-section-title" style="text-align:center;">Frequently Asked Questions</h2>
+    <p class="proj-section-sub" style="text-align:center;max-width:640px;margin-left:auto;margin-right:auto;">Common questions from {{city.name}} homeowners researching {{service.label}}.</p>
+    <div class="proj-faq">
+      {{#each faq}}
+      <details class="proj-faq-item">
+        <summary>{{q}}</summary>
+        <p>{{a}}</p>
+      </details>
+      {{/each}}
     </div>
   </div>
 </div>

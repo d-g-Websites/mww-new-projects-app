@@ -3,7 +3,7 @@ import multer from 'multer';
 import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
-import { SERVICES, getService, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
+import { SERVICES, getService, getHub, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
 import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
 
@@ -13,6 +13,7 @@ import { notifyNewProject } from '../lib/telegram.js';
 const NARRATIVE_PLACEHOLDER = "⚠️ The automatic narrative generation didn't complete (the AI service may have timed out or hit a rate limit). Click \"Regenerate narrative\" below to retry, or replace this text with the two paragraphs you want to publish.";
 import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
+import { generateFaq } from '../lib/faq.js';
 import { renderProjectHtml } from '../lib/render.js';
 import { publishProject } from './publish.js';
 
@@ -369,8 +370,11 @@ router.post('/new',
         excludeSlugs: [city.slug, city.spokeSlug].filter(Boolean),
       }).map(c => c.name);
 
-      // Try Claude. If it fails, leave the placeholder in place and let
-      // the tech retry from the preview page.
+      // Try Claude — narrative + FAQ. Each is wrapped independently so
+      // one failing doesn't take down the other. The draft is already
+      // saved at this point, so either can be regenerated from the
+      // preview screen.
+      const hubObj = getHub(city.hub) || { name: city.hub, phone: '' };
       try {
         const paragraphs = await generateNarrative({
           service:  service.label,
@@ -385,8 +389,24 @@ router.post('/new',
         updateDraft(id, { narrative: paragraphs.join('\n\n') });
       } catch (err) {
         console.error(`[narrative] failed for project ${id}:`, err.message);
-        // narrative column already holds NARRATIVE_PLACEHOLDER — preview
-        // will surface a "Regenerate narrative" button.
+      }
+      try {
+        const faq = await generateFaq({
+          service:      service.label,
+          city:         `${city.name}, IL`,
+          homeType:     b.home_type,
+          metric:       `${b.metric_value || ''} ${b.metric_label || ''}`.trim(),
+          price:        b.price || null,
+          hubName:      hubObj.name,
+          hubPhone:     hubObj.phone || '',
+          extras,
+          challenges:   augmentChallenges(extras),
+          serviceValue: service.value,
+        });
+        updateDraft(id, { faq: JSON.stringify(faq) });
+      } catch (err) {
+        console.error(`[faq] failed for project ${id}:`, err.message);
+        // Empty array stays — preview surfaces a "Regenerate FAQ" button.
       }
 
       res.redirect(`/projects/${id}/preview`);
@@ -394,6 +414,37 @@ router.post('/new',
       next(err);
     }
   });
+
+// Re-run the FAQ generator on a stored project. Uses the same inputs
+// as the original generation (city, hub, price, extras, challenges)
+// pulled back from the DB.
+router.post('/projects/:id/regenerate-faq', async (req, res, next) => {
+  try {
+    const p = getProject(Number(req.params.id));
+    if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (p.status === 'published') {
+      return res.status(409).render('error', { message: 'Already published — cannot regenerate.' });
+    }
+    const hubObj = getHub(p.hub) || { name: p.hub, phone: '' };
+    const faq = await generateFaq({
+      service:      p.service_label,
+      city:         `${p.city_name}, IL`,
+      homeType:     p.home_type,
+      metric:       `${p.metric_value || ''} ${p.metric_label || ''}`.trim(),
+      price:        p.price || null,
+      hubName:      hubObj.name,
+      hubPhone:     hubObj.phone || '',
+      extras:       p.extras,
+      challenges:   augmentChallenges({ ...p.extras, challenges: (p.extras && p.extras.challenges) || [] }),
+      serviceValue: p.service,
+    });
+    updateDraft(p.id, { faq: JSON.stringify(faq) });
+    res.redirect(`/projects/${p.id}/preview`);
+  } catch (err) {
+    console.error(`[faq regen] failed for project ${req.params.id}:`, err.message);
+    next(err);
+  }
+});
 
 // Re-run Claude on a stored draft. Reads bullet_facts / extras / etc.
 // back out of the DB so the retry uses whatever the tech originally
@@ -438,7 +489,8 @@ router.get('/projects/:id/preview', (req, res) => {
   // fine, the tech is reviewing copy, not the photos).
   const html = renderProjectHtml(p);
   const narrativeFailed = (p.narrative || '').trimStart().startsWith('⚠');
-  res.render('preview', { project: p, html, narrativeFailed });
+  const faqEmpty = !Array.isArray(p.faq) || p.faq.length === 0;
+  res.render('preview', { project: p, html, narrativeFailed, faqEmpty });
 });
 
 // Edit the narrative in-place before publishing.

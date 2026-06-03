@@ -12,7 +12,7 @@ import { getService } from './slug.js';
 //   2. If none match, prepend a new card and drop the oldest of 3.
 //   3. Also append the project to the footer column "Recent Projects".
 
-export function updateSpokePage(siteRepoPath, citySlug, project) {
+export function updateSpokePage(siteRepoPath, citySlug, project, opts = {}) {
   const spokePath = join(siteRepoPath, `${citySlug}.html`);
   if (!existsSync(spokePath)) {
     return { skipped: true, reason: `no spoke page at ${spokePath}` };
@@ -25,6 +25,7 @@ export function updateSpokePage(siteRepoPath, citySlug, project) {
   const service = getService(project.service);
   const tagText = service?.spokeTag || project.service_label;
   const projectHref = `projects/${project.slug}`;
+  const archiveHref = `projects/${citySlug}`;
 
   const cards = $('.project-cards .project-card');
   if (cards.length === 0) {
@@ -50,6 +51,28 @@ export function updateSpokePage(siteRepoPath, citySlug, project) {
     if (all.length > 3) {
       all.last().remove();
     }
+  }
+
+  // "View all N completed projects in [City] →" link below the
+  // tile grid. The 4th-and-older tiles fall off the grid but stay
+  // reachable through this link → the per-spoke archive page.
+  // Idempotent: replaces any existing .projects-view-all block.
+  const cityName = (project.city_name || titleCase(citySlug));
+  const count = opts.projectCount ?? 0;
+  const viewAllHtml = `
+    <div class="projects-view-all" style="margin-top:24px;text-align:center;">
+      <a href="${archiveHref}" style="display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#133047;text-decoration:none;padding:10px 22px;border:2px solid #133047;border-radius:8px;transition:background .15s,color .15s;"
+         onmouseover="this.style.background='#133047';this.style.color='#fff';"
+         onmouseout="this.style.background='';this.style.color='#133047';">
+        View all ${count} completed project${count === 1 ? '' : 's'} in ${escapeHtml(cityName)}
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    </div>`;
+  const $existingViewAll = $('.project-cards').nextAll('.projects-view-all').first();
+  if ($existingViewAll.length) {
+    $existingViewAll.replaceWith(viewAllHtml);
+  } else {
+    $('.project-cards').after(viewAllHtml);
   }
 
   // Footer "Recent Projects" column — find the <ul> following the
@@ -102,4 +125,7 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) {
   return escapeHtml(s).replace(/"/g, '&quot;');
+}
+function titleCase(slug) {
+  return String(slug).split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }

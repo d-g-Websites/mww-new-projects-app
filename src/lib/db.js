@@ -188,6 +188,57 @@ export function listPublished({ limit = 20, excludeId = null } = {}) {
   `).all(limit).map(parseExtras);
 }
 
+// Every published project, newest first. Powers /projects/index.html.
+export function listPublishedAll() {
+  return db.prepare(`
+    SELECT * FROM projects
+     WHERE status = 'published'
+     ORDER BY published_at DESC
+  `).all().map(parseExtras);
+}
+
+// Every published project for a given spoke (matching spoke_slug, or
+// matching city_slug for drafts that predate the spoke_slug column).
+// Powers /projects/<spoke>.html.
+export function listPublishedBySpoke(spokeSlug) {
+  return db.prepare(`
+    SELECT * FROM projects
+     WHERE status = 'published'
+       AND (spoke_slug = ? OR (spoke_slug IS NULL AND city_slug = ?))
+     ORDER BY published_at DESC
+  `).all(spokeSlug, spokeSlug).map(parseExtras);
+}
+
+// Every published project for a given service value (window-cleaning,
+// gutter-cleaning, power-washing). Powers /projects/<service>.html.
+export function listPublishedByService(serviceValue) {
+  return db.prepare(`
+    SELECT * FROM projects
+     WHERE status = 'published' AND service = ?
+     ORDER BY published_at DESC
+  `).all(serviceValue).map(parseExtras);
+}
+
+// Distinct spoke slugs that have at least one published project. Used
+// to know which per-spoke archive pages should currently exist.
+export function listSpokesWithPublished() {
+  return db.prepare(`
+    SELECT DISTINCT COALESCE(spoke_slug, city_slug) AS spoke_slug
+      FROM projects
+     WHERE status = 'published'
+       AND COALESCE(spoke_slug, city_slug) IS NOT NULL
+  `).all().map(r => r.spoke_slug);
+}
+
+// Distinct service values that have at least one published project.
+export function listServicesWithPublished() {
+  return db.prepare(`
+    SELECT DISTINCT service
+      FROM projects
+     WHERE status = 'published'
+  `).all().map(r => r.service);
+}
+
 // 3 most-recent published projects from a different city OR different service.
 // Used for the "Related Projects" section on a new page.
 export function relatedProjects({ excludeId, citySlug, service, limit = 3 }) {

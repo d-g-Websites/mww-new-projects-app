@@ -2,9 +2,10 @@ import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { writeProjectPage } from '../lib/render.js';
 import { updateSpokePage } from '../lib/spoke-update.js';
-import { updateSitemap } from '../lib/sitemap.js';
+import { updateSitemap, updateSitemapArchives } from '../lib/sitemap.js';
 import { commitAndPush, syncSiteRepo } from '../lib/git.js';
-import { markPublished } from '../lib/db.js';
+import { markPublished, getProject, listPublishedBySpoke } from '../lib/db.js';
+import { writeAffectedArchives, currentArchiveUrls } from '../lib/archive.js';
 
 // Run the four side-effects in order:
 //   1. Write projects/<slug>.html
@@ -52,27 +53,49 @@ export async function publishProject(project) {
     }
   }
 
-  // 3. Patch the matching spoke page. spoke_slug is what
+  // 3. Mark published in DB BEFORE archive regeneration so the new
+  //    project is included in listPublishedAll() / -BySpoke() / -ByService()
+  //    queries that the archive pages build from. Slight ordering wart
+  //    (we mark published before the git push completes), but the
+  //    push itself is idempotent — if it fails we revert below.
+  markPublished(project.id);
+
+  // 4. Patch the matching spoke page. spoke_slug is what
   //    resolveCityFromLocality picked as the nearest spoke — equals
   //    city_slug when the city is itself a spoke, but differs when
   //    the city has no spoke page (e.g. Romeoville → Lemont). Fall
   //    back to city_slug for drafts created before spoke_slug existed.
   const spokeToPatch = project.spoke_slug || project.city_slug;
-  const spokeResult = updateSpokePage(siteRepo, spokeToPatch, project);
+  const freshProject = getProject(project.id);
+  // Count of published projects for this spoke — used to build the
+  // "View all N completed projects in [City] →" footer link on the
+  // spoke's Recent Projects section.
+  const spokeProjectCount = listPublishedBySpoke(spokeToPatch).length;
+  const spokeResult = updateSpokePage(siteRepo, spokeToPatch, freshProject, {
+    projectCount: spokeProjectCount,
+  });
   const spokePath = join(siteRepo, `${spokeToPatch}.html`);
 
-  // 4. Patch sitemap.xml.
+  // 5. Regenerate the master + service + spoke archive pages so the
+  //    new project shows up everywhere it belongs and the oldest
+  //    truncated from the spoke tile grid still has a home.
+  const archivePaths = writeAffectedArchives(siteRepo, freshProject);
+
+  // 6. Patch sitemap.xml — both the new project's URL and the
+  //    archive URLs (some of which may be new this publish).
   const today = new Date().toISOString().slice(0, 10);
   updateSitemap(siteRepo, project, today);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
   const sitemapPath = join(siteRepo, 'sitemap.xml');
 
-  // 5. Stage and commit. Paths are relative to the repo root for git.
+  // 7. Stage and commit. Paths are relative to the repo root for git.
   const files = [
     relTo(siteRepo, projectPath),
     relTo(siteRepo, beforeDest),
     relTo(siteRepo, afterDest),
     relTo(siteRepo, sitemapPath),
     ...extraDests.map(d => relTo(siteRepo, d)),
+    ...archivePaths.map(p => relTo(siteRepo, p)),
   ];
   if (!spokeResult.skipped) files.push(relTo(siteRepo, spokePath));
 
@@ -85,11 +108,10 @@ export async function publishProject(project) {
     push: pushFlag,
   });
 
-  markPublished(project.id);
-
   return {
     projectPath:  basename(projectPath),
     spoke:        spokeResult,
+    archives:     archivePaths.map(p => basename(p)),
     sitemapDate:  today,
     git,
     pushed:       pushFlag,

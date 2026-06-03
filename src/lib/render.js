@@ -325,14 +325,14 @@ function buildView(project, opts = {}) {
 
 function shortStatVerb(serviceVal) {
   if (serviceVal === 'window-cleaning') return 'Cleaned';
-  if (serviceVal === 'gutter-cleaning') return 'Ft Cleared';
+  if (serviceVal === 'gutter-cleaning') return 'Sq Ft';
   if (serviceVal === 'power-washing')   return 'Sq Ft Washed';
   return 'Completed';
 }
 
 function metricForService(serviceVal) {
   if (serviceVal === 'window-cleaning') return 'Windows Cleaned';
-  if (serviceVal === 'gutter-cleaning') return 'Linear Feet';
+  if (serviceVal === 'gutter-cleaning') return 'Sq Ft';
   if (serviceVal === 'power-washing')   return 'Sq Ft Washed';
   if (serviceVal === 'solar-panel-cleaning') return 'Panels Cleaned';
   return 'Project Scope';
@@ -352,11 +352,7 @@ function defaultServiceLevel(serviceVal) {
 // grow their own service-specific form.
 function scopeTagsFor(serviceVal, extras) {
   if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
-  // Gutter cleaning starts as a clone of window-cleaning's logic.
-  // The tags will get renamed and the inputs will diverge as we
-  // tailor the gutter form (e.g. linear feet, downspouts, leaf
-  // density, etc.).
-  if (serviceVal === 'gutter-cleaning') return windowScopeTags(extras);
+  if (serviceVal === 'gutter-cleaning') return gutterScopeTags(extras);
   if (serviceVal === 'power-washing') {
     return ['Soft Washing', 'Driveway Cleaning', 'Siding Wash', 'Algae & Mildew Treatment'];
   }
@@ -364,6 +360,31 @@ function scopeTagsFor(serviceVal, extras) {
     return ['Deionized Water Rinse', 'Soft-Brush Wash', 'Panel Inspection', 'Edge Detailing'];
   }
   return [];
+}
+
+function gutterScopeTags(extras = {}) {
+  const tags = [];
+  // The chosen service type drives the lead tag.
+  if (extras.serviceType === 'Repair') {
+    tags.push('Gutter Repair');
+  } else if (extras.serviceType === 'Gutter Guard Installation') {
+    tags.push('Gutter Guard Installation');
+  } else {
+    // Cleaning (default) — always includes hand-clearing + downspout flush.
+    tags.push('Gutter Hand-Clearing', 'Downspout Flushing');
+  }
+  if (extras.gutterGuards)     tags.push('Gutter Guards');
+  if (extras.roofCleaning)     tags.push('Roof Cleaning');
+  if (extras.gutterRepairs) {
+    tags.push('Gutter Repairs');
+    if (Array.isArray(extras.gutterRepairTypes)) {
+      for (const t of extras.gutterRepairTypes) tags.push(t);
+    }
+  }
+  if (extras.extraWideGutters) tags.push('Extra-Wide Gutter Cleaning');
+  if (extras.cloggedElbows)    tags.push('Clogged Elbow Clearing');
+  if (extras.undergroundClogs) tags.push('Underground Clog Clearing');
+  return tags;
 }
 
 function windowScopeTags(extras = {}) {

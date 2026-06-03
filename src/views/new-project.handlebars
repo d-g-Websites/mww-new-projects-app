@@ -109,27 +109,48 @@
     <h2>5. What we did</h2>
     <div class="field">
       <label for="bullet_facts">Bullet notes (the AI expands these)</label>
-      <textarea id="bullet_facts" name="bullet_facts" rows="6" placeholder="- arrived 9am
-- 24 windows, 2 stories
-- north side had salt residue
-- screens washed and replaced
-- frames and tracks wiped
-- 4 hours total">{{formValues.bullet_facts}}</textarea>
+      <textarea id="bullet_facts" name="bullet_facts" rows="6" placeholder="{{bulletPlaceholder}}">{{formValues.bullet_facts}}</textarea>
     </div>
 
     {{#if challengeChoices.length}}
     <div class="field">
       <label>Challenges faced on this job <small style="color:#8a9db0;font-weight:400;">(check all that apply)</small></label>
-      <div class="check-grid">
+      <div class="check-grid" id="challenge-grid">
         {{#each challengeChoices}}
-        <label class="check-row">
-          <input type="checkbox" name="challenges" value="{{this}}" {{#if (includes ../formValues.challenges this)}}checked{{/if}}>
-          <span>{{this}}</span>
-        </label>
+          {{#if extra}}
+          <label class="check-row {{#if (eq extra.type "number")}}has-count{{else}}has-text{{/if}} {{#if (lookup ../formValues extra.name)}}is-checked{{/if}}">
+            <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../formValues.challenges label)}}checked{{/if}}>
+            <span>{{label}} <small style="color:#8a9db0;">({{extra.prompt}})</small></span>
+            <span class="{{#if (eq extra.type "number")}}count-input{{else}}text-input{{/if}}">
+              <input type="{{extra.type}}" name="{{extra.name}}" placeholder="{{extra.placeholder}}"
+                     value="{{lookup ../formValues extra.name}}"
+                     {{#if (eq extra.type "number")}}min="0" inputmode="numeric"{{/if}}>
+            </span>
+          </label>
+          {{else}}
+          <label class="check-row">
+            <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../formValues.challenges label)}}checked{{/if}}>
+            <span>{{label}}</span>
+          </label>
+          {{/if}}
         {{/each}}
       </div>
       <small>The AI weaves these into the second paragraph as the conditions our crew worked through.</small>
     </div>
+    <script>
+      // Toggle the extra-input show/hide for challenges that have an
+      // associated count or specify field. Same pattern as Section 2.
+      document.querySelectorAll('#challenge-grid .check-row.has-count, #challenge-grid .check-row.has-text').forEach(function (row) {
+        var box = row.querySelector('input[type="checkbox"]');
+        function sync() {
+          row.classList.toggle('is-checked', box.checked);
+          var extra = row.querySelector('.count-input input, .text-input input');
+          if (extra && !box.checked) extra.value = '';
+        }
+        box.addEventListener('change', sync);
+        sync();
+      });
+    </script>
     {{/if}}
   </div>
 

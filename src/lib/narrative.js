@@ -106,10 +106,15 @@ function formatChallenges(challenges) {
 
 // Turn the service-specific extras object into a few bullet lines the
 // model can ground on. Skips empty fields so the prompt stays tight.
+// Branches by which fields are present rather than by service value,
+// so a future service can fill in the same shape and have its details
+// flow through automatically.
 function formatExtras(extras) {
   if (!extras || typeof extras !== 'object') return '';
   const lines = [];
   if (extras.serviceType) lines.push(`- Service type: ${extras.serviceType}`);
+
+  // Window-cleaning fields
   if (Array.isArray(extras.windowTypes) && extras.windowTypes.length) {
     lines.push(`- Window types present: ${extras.windowTypes.join(', ')}`);
   }
@@ -118,5 +123,19 @@ function formatExtras(extras) {
   if (extras.skylights)    lines.push(`- Skylights cleaned: ${extras.skylights}`);
   if (extras.windowWells)  lines.push(`- Window wells cleaned: ${extras.windowWells}`);
   if (extras.tracksFrames) lines.push(`- Tracks and frames wiped down`);
+
+  // Gutter-cleaning fields
+  if (extras.sqFootage)        lines.push(`- Approximate home footprint: ${extras.sqFootage} sq ft`);
+  if (extras.gutterGuards)     lines.push(`- Gutter guards involved`);
+  if (extras.roofCleaning)     lines.push(`- Roof cleaning included`);
+  if (extras.gutterRepairs) {
+    const list = Array.isArray(extras.gutterRepairTypes) && extras.gutterRepairTypes.length
+      ? ` (${extras.gutterRepairTypes.join(', ')})` : '';
+    lines.push(`- Gutter repairs performed${list}`);
+  }
+  if (extras.extraWideGutters) lines.push(`- Extra-wide gutters on this property`);
+  if (extras.cloggedElbows)    lines.push(`- Clogged elbows that needed clearing`);
+  if (extras.undergroundClogs) lines.push(`- Underground drain clogs that needed clearing`);
+
   return lines.length ? '\nExtras:\n' + lines.join('\n') + '\n' : '';
 }

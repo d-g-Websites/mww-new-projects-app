@@ -12,50 +12,59 @@
   </div>
 
   <div class="field">
-    <label for="metric_value">How many windows cleaned?</label>
-    <input id="metric_value" name="metric_value" type="number" min="1" inputmode="numeric"
-           value="{{formValues.metric_value}}" placeholder="24" required>
+    <label for="metric_value">Approximate sq footage <small style="color:#8a9db0;font-weight:400;">(optional)</small></label>
+    <input id="metric_value" name="metric_value" type="number" min="0" inputmode="numeric"
+           value="{{formValues.metric_value}}" placeholder="e.g. 2400">
   </div>
-  <input type="hidden" name="metric_label" value="Windows Cleaned">
+  <input type="hidden" name="metric_label" value="Sq Ft">
 
   <div class="field">
     <label for="service_type">Service type</label>
     <select id="service_type" name="service_type" required>
       <option value="">Select…</option>
-      <option value="In &amp; Out" {{#if (eq formValues.service_type "In & Out")}}selected{{/if}}>In &amp; Out</option>
-      <option value="Out Only"    {{#if (eq formValues.service_type "Out Only")}}selected{{/if}}>Out only</option>
+      <option value="Cleaning"                  {{#if (eq formValues.service_type "Cleaning")}}selected{{/if}}>Cleaning</option>
+      <option value="Repair"                    {{#if (eq formValues.service_type "Repair")}}selected{{/if}}>Repair</option>
+      <option value="Gutter Guard Installation" {{#if (eq formValues.service_type "Gutter Guard Installation")}}selected{{/if}}>Gutter Guard Installation</option>
     </select>
   </div>
 
   <div class="field">
-    <label>Window type (check all that apply)</label>
+    <label>Extras (check all that apply)</label>
     <div class="check-grid">
       <label class="check-row">
-        <input type="checkbox" name="window_types" value="French Style"   {{#if (includes formValues.window_types "French Style")}}checked{{/if}}>
-        <span>French style windows</span>
+        <input type="checkbox" name="gutter_guards" value="yes" {{#if formValues.gutter_guards}}checked{{/if}}>
+        <span>Gutter guards</span>
       </label>
       <label class="check-row">
-        <input type="checkbox" name="window_types" value="Double Hung"    {{#if (includes formValues.window_types "Double Hung")}}checked{{/if}}>
-        <span>Double-hung windows</span>
+        <input type="checkbox" name="roof_cleaning" value="yes" {{#if formValues.roof_cleaning}}checked{{/if}}>
+        <span>Roof cleaning</span>
       </label>
-      <label class="check-row">
-        <input type="checkbox" name="window_types" value="Casement"       {{#if (includes formValues.window_types "Casement")}}checked{{/if}}>
-        <span>Casement windows</span>
-      </label>
-    </div>
-  </div>
 
-  <div class="field">
-    <label>Extras (check what was included, then enter count)</label>
-    <div class="check-grid">
-      {{> extra-count-checkbox name="screens"        label="Screens"        formValues=formValues}}
-      {{> extra-count-checkbox name="storm_windows"  label="Storm windows"  formValues=formValues}}
-      {{> extra-count-checkbox name="skylights"      label="Skylights"      formValues=formValues}}
-      {{> extra-count-checkbox name="window_wells"   label="Window wells"   formValues=formValues}}
+      <div class="check-row has-subs {{#if formValues.gutter_repairs}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="gutter_repairs" value="yes" {{#if formValues.gutter_repairs}}checked{{/if}}>
+          <span>Gutter repairs <small style="color:#8a9db0;font-weight:400;">(check what was done)</small></span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Downspout Reattachment" {{#if (includes formValues.gutter_repair_types "Downspout Reattachment")}}checked{{/if}}><span>Downspout reattachment</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Level Corrections"      {{#if (includes formValues.gutter_repair_types "Level Corrections")}}checked{{/if}}><span>Level corrections</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Elbow Reattachment"     {{#if (includes formValues.gutter_repair_types "Elbow Reattachment")}}checked{{/if}}><span>Elbow reattachment</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Loose Hangers"          {{#if (includes formValues.gutter_repair_types "Loose Hangers")}}checked{{/if}}><span>Loose hangers</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Leak Repair"            {{#if (includes formValues.gutter_repair_types "Leak Repair")}}checked{{/if}}><span>Leak repair</span></label>
+        </div>
+      </div>
 
       <label class="check-row">
-        <input type="checkbox" name="tracks_frames" value="yes" {{#if formValues.tracks_frames}}checked{{/if}}>
-        <span>Tracks &amp; frames</span>
+        <input type="checkbox" name="extra_wide_gutters" value="yes" {{#if formValues.extra_wide_gutters}}checked{{/if}}>
+        <span>Extra wide gutters</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="clogged_elbows" value="yes" {{#if formValues.clogged_elbows}}checked{{/if}}>
+        <span>Clogged elbows</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="underground_clogs" value="yes" {{#if formValues.underground_clogs}}checked{{/if}}>
+        <span>Underground clogs</span>
       </label>
     </div>
   </div>
@@ -73,8 +82,10 @@
 </div>
 
 <script>
-  // Toggle the "how many" input next to each checkbox-with-count.
-  document.querySelectorAll('.check-row.has-count').forEach(function (row) {
+  // Same toggle behavior as the window-cleaning partial. Extends the
+  // pattern to .has-subs (parent checkbox reveals a nested grid of
+  // child checkboxes) on top of .has-count.
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs').forEach(function (row) {
     var box = row.querySelector('input[type="checkbox"]');
     function sync() {
       row.classList.toggle('is-checked', box.checked);

@@ -52,30 +52,51 @@ const DETAILS_PARTIALS = {
 // Per-service common challenges. Surfaced as checkboxes in Section 5
 // ("What we did"). Whatever the tech ticks is fed to the narrative as
 // "challenges encountered" so the work paragraph names them naturally.
-// Gutter cleaning starts as a clone of window cleaning's list — will
-// be tailored down to gutter-specific challenges next.
+// Each entry is { label, extra? } — extra adds either a number or text
+// input next to the checkbox (e.g. bag count, "specify which animal").
+// Per-service placeholder text for the "Bullet notes" textarea on
+// Section 5 — gives the tech a relevant set of examples instead of
+// the window-cleaning sample on every form.
+const BULLET_PLACEHOLDER = {
+  'window-cleaning': `- arrived 9am
+- 24 windows, 2 stories
+- north side had salt residue
+- screens washed and replaced
+- frames and tracks wiped
+- 4 hours total`,
+  'gutter-cleaning': `- arrived 8am, 2-story home, 180 ft of gutter
+- hand-cleared all gutters, 4 bags of leaves + debris
+- flushed downspouts, found one clog at NE elbow
+- reattached loose hanger on south side
+- bagged + hauled off all debris
+- 3 hours total`,
+  'power-washing':   `- arrived 8am
+- 2-car driveway plus front walk
+- algae growth on north siding
+- soft-washed siding, low-pressure
+- standard rinse-and-go on concrete
+- 4 hours total`,
+};
+
 const CHALLENGE_CHOICES = {
   'window-cleaning': [
-    'Post-construction scraping',
-    'Hard water stain removal',
-    'Lots of bugs and spiders',
-    'Screen repair',
-    'Oversized windows',
-    'Very tall house',
-    'Bushes and trees by the windows',
-    'Deep window wells',
-    'Need to use ladder inside',
+    { label: 'Post-construction scraping' },
+    { label: 'Hard water stain removal' },
+    { label: 'Lots of bugs and spiders' },
+    { label: 'Screen repair' },
+    { label: 'Oversized windows' },
+    { label: 'Very tall house' },
+    { label: 'Bushes and trees by the windows' },
+    { label: 'Deep window wells' },
+    { label: 'Need to use ladder inside' },
   ],
   'gutter-cleaning': [
-    'Post-construction scraping',
-    'Hard water stain removal',
-    'Lots of bugs and spiders',
-    'Screen repair',
-    'Oversized windows',
-    'Very tall house',
-    'Bushes and trees by the windows',
-    'Deep window wells',
-    'Need to use ladder inside',
+    { label: 'Very tall house' },
+    { label: '36 foot ladder needed' },
+    { label: 'Lots of bags collected',     extra: { type: 'number', name: 'bags_count',     prompt: 'how many?',    placeholder: 'bag count' } },
+    { label: 'Clogged downspouts' },
+    { label: 'Plants growing in the gutters' },
+    { label: 'Animals in the gutters',     extra: { type: 'text',   name: 'animals_detail', prompt: 'specify what', placeholder: 'e.g. bird nest, raccoon, squirrels' } },
   ],
   'power-washing':   [],
 };
@@ -88,10 +109,28 @@ router.get('/new/details', (req, res) => {
     service,
     detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
     challengeChoices: CHALLENGE_CHOICES[service.value] || [],
+    bulletPlaceholder: BULLET_PLACEHOLDER[service.value] || '',
     today: new Date().toISOString().slice(0, 10),
     googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
   });
 });
+
+// Augment the challenge label array with the count/specify text the
+// tech filled in. The narrative prompt then sees the challenge with
+// its context already inline ("Lots of bags collected (12 bags)")
+// instead of needing to cross-reference fields.
+function augmentChallenges(extras) {
+  const challenges = Array.isArray(extras?.challenges) ? extras.challenges : [];
+  return challenges.map(c => {
+    if (c === 'Lots of bags collected' && extras.bagsCount) {
+      return `${c} (${extras.bagsCount} bags)`;
+    }
+    if (c === 'Animals in the gutters' && extras.animalsDetail) {
+      return `${c} (${extras.animalsDetail})`;
+    }
+    return c;
+  });
+}
 
 // Pulls service-specific fields out of the form body and packs them
 // into a single `extras` object that gets JSON-serialized to the DB.
@@ -100,10 +139,8 @@ function collectExtras(serviceValue, b) {
   const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
   const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
   const challenges = arr(b.challenges);
-  if (serviceValue === 'window-cleaning' || serviceValue === 'gutter-cleaning') {
-    // Gutter cleaning currently uses the same form shape as window
-    // cleaning. The field names will get renamed and the schema will
-    // diverge as we tailor the gutter form.
+
+  if (serviceValue === 'window-cleaning') {
     return {
       serviceType:  b.service_type || null,
       windowTypes:  arr(b.window_types),
@@ -115,6 +152,25 @@ function collectExtras(serviceValue, b) {
       challenges,
     };
   }
+
+  if (serviceValue === 'gutter-cleaning') {
+    return {
+      serviceType:        b.service_type || null,        // Cleaning | Repair | Gutter Guard Installation
+      sqFootage:          intOrNull(b.metric_value),     // optional approximate home footprint
+      gutterGuards:       !!b.gutter_guards,
+      roofCleaning:       !!b.roof_cleaning,
+      gutterRepairs:      !!b.gutter_repairs,
+      gutterRepairTypes:  b.gutter_repairs ? arr(b.gutter_repair_types) : [],
+      extraWideGutters:   !!b.extra_wide_gutters,
+      cloggedElbows:      !!b.clogged_elbows,
+      undergroundClogs:   !!b.underground_clogs,
+      challenges,
+      // Extra detail captured alongside specific challenge checkboxes.
+      bagsCount:          intOrNull(b.bags_count),
+      animalsDetail:      (b.animals_detail || '').trim() || null,
+    };
+  }
+
   return { challenges };
 }
 
@@ -138,6 +194,7 @@ router.post('/new',
         service: svc,
         detailsPartial: DETAILS_PARTIALS[svc.value] || 'details-generic',
         challengeChoices: CHALLENGE_CHOICES[svc.value] || [],
+        bulletPlaceholder: BULLET_PLACEHOLDER[svc.value] || '',
         today: new Date().toISOString().slice(0, 10),
         formValues: b,
         googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -172,6 +229,7 @@ router.post('/new',
           service,
           detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
           challengeChoices: CHALLENGE_CHOICES[service.value] || [],
+          bulletPlaceholder: BULLET_PLACEHOLDER[service.value] || '',
           today: b.review_date,
           formValues: b,
           googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -263,8 +321,8 @@ router.post('/new',
           city:     `${city.name}, IL`,
           homeType: b.home_type,
           metric:   `${b.metric_value || ''} ${b.metric_label || ''}`.trim(),
-          challenges: extras.challenges || [],
-          bulletFacts: b.bullet_facts,
+          challenges:   augmentChallenges(extras),
+          bulletFacts:  b.bullet_facts,
           extras,
           nearbyTowns,
         });
@@ -296,15 +354,13 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
       excludeSlugs: [p.city_slug, p.spoke_slug].filter(Boolean),
     }).map(c => c.name);
 
+    const baseChallenges = (p.extras && p.extras.challenges) || (p.challenge ? [p.challenge] : []);
     const paragraphs = await generateNarrative({
       service:  p.service_label,
       city:     `${p.city_name}, IL`,
       homeType: p.home_type,
       metric:   `${p.metric_value || ''} ${p.metric_label || ''}`.trim(),
-      // Prefer the structured challenges from extras; fall back to the
-      // legacy free-text `challenge` column for drafts created before
-      // the checklist existed.
-      challenges:  (p.extras && p.extras.challenges) || (p.challenge ? [p.challenge] : []),
+      challenges:  augmentChallenges({ ...p.extras, challenges: baseChallenges }),
       bulletFacts: p.bullet_facts,
       extras:      p.extras,
       nearbyTowns,

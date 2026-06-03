@@ -353,9 +353,9 @@ function defaultServiceLevel(serviceVal) {
 function scopeTagsFor(serviceVal, extras) {
   if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
   if (serviceVal === 'gutter-cleaning') return gutterScopeTags(extras);
-  if (serviceVal === 'power-washing') {
-    return ['Soft Washing', 'Driveway Cleaning', 'Siding Wash', 'Algae & Mildew Treatment'];
-  }
+  // Power-washing starts as a clone of window-cleaning's logic until
+  // we tailor its form (surface types, soft-vs-pressure split, etc.).
+  if (serviceVal === 'power-washing')   return windowScopeTags(extras);
   if (serviceVal === 'solar-panel-cleaning') {
     return ['Deionized Water Rinse', 'Soft-Brush Wash', 'Panel Inspection', 'Edge Detailing'];
   }

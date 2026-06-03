@@ -46,7 +46,7 @@ router.get('/new', (req, res) => {
 const DETAILS_PARTIALS = {
   'window-cleaning': 'details-window-cleaning',
   'gutter-cleaning': 'details-gutter-cleaning',
-  'power-washing':   'details-generic',
+  'power-washing':   'details-power-washing',
 };
 
 // Per-service common challenges. Surfaced as checkboxes in Section 5
@@ -98,7 +98,17 @@ const CHALLENGE_CHOICES = {
     { label: 'Plants growing in the gutters' },
     { label: 'Animals in the gutters',     extra: { type: 'text',   name: 'animals_detail', prompt: 'specify what', placeholder: 'e.g. bird nest, raccoon, squirrels' } },
   ],
-  'power-washing':   [],
+  'power-washing': [
+    { label: 'Post-construction scraping' },
+    { label: 'Hard water stain removal' },
+    { label: 'Lots of bugs and spiders' },
+    { label: 'Screen repair' },
+    { label: 'Oversized windows' },
+    { label: 'Very tall house' },
+    { label: 'Bushes and trees by the windows' },
+    { label: 'Deep window wells' },
+    { label: 'Need to use ladder inside' },
+  ],
 };
 
 // ── Step 2: fill in the actual details for the chosen service. ──
@@ -140,7 +150,10 @@ function collectExtras(serviceValue, b) {
   const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
   const challenges = arr(b.challenges);
 
-  if (serviceValue === 'window-cleaning') {
+  if (serviceValue === 'window-cleaning' || serviceValue === 'power-washing') {
+    // Power-washing currently uses the same shape as window-cleaning;
+    // the field names will get renamed and the schema will diverge
+    // when we tailor the power-washing form.
     return {
       serviceType:  b.service_type || null,
       windowTypes:  arr(b.window_types),

@@ -55,8 +55,10 @@ function buildSchema(p, service, city, hub) {
   const serviceId  = `${canonical}#service-instance`;
   const beforeId   = `${canonical}#before-image`;
   const afterId    = `${canonical}#after-image`;
+  const videoId    = `${canonical}#video`;
   const breadcrumbId = `${canonical}#breadcrumb`;
   const dateISO    = p.review_date || new Date().toISOString().slice(0, 10);
+  const hasVideo   = !!(p.video && p.video.src);
 
   const imageRefs = [
     { '@id': beforeId },
@@ -96,6 +98,7 @@ function buildSchema(p, service, city, hub) {
       datePublished: dateISO,
       dateModified:  dateISO,
       image:     imageRefs,
+      ...(hasVideo ? { video: { '@id': videoId } } : {}),
       articleBody: (p.narrative || '').replace(/\s+/g, ' ').trim(),
       author:    { '@id': hub.parentOrgUrl },
       publisher: { '@id': hub.parentOrgUrl },
@@ -152,6 +155,24 @@ function buildSchema(p, service, city, hub) {
       height: 800,
     })),
   ];
+
+  if (hasVideo) {
+    const videoBlock = {
+      '@type': 'VideoObject',
+      '@id':   videoId,
+      name:    `${service.label} project video — ${city.name}, IL`,
+      description: p.video.descriptionText || p.serviceDescription,
+      uploadDate: dateISO,
+      embedUrl:    p.video.src,
+      contentUrl:  p.video.contentUrl || p.video.src,
+      publisher:   { '@id': hub.parentOrgUrl },
+    };
+    // YouTube exposes a predictable thumbnail URL; Vimeo doesn't, so
+    // we fall back to the project's after-image when no platform
+    // thumbnail is available — gives Google a frame to use either way.
+    videoBlock.thumbnailUrl = p.video.thumbnailUrl || afterUrl;
+    graph.push(videoBlock);
+  }
 
   if (p.customer_name && p.review_text) {
     graph.push({
@@ -295,6 +316,7 @@ function buildView(project, opts = {}) {
       dateLabel,
       seoTitle:       view.seo.title,
       seoDescription: view.seo.description,
+      video:          view.video,
     },
     service, city, hub
   );
@@ -373,7 +395,9 @@ function plur(n, singular) {
 
 // Normalize a YouTube / Vimeo URL to its iframe-embed form. Returns
 // null for anything we don't recognize so the section stays hidden
-// rather than embedding a broken iframe.
+// rather than embedding a broken iframe. Also returns the platform's
+// stable video id (when we can extract one) so VideoObject schema can
+// reference a thumbnail URL.
 function videoEmbed(rawUrl) {
   if (!rawUrl) return null;
   let u;
@@ -383,28 +407,53 @@ function videoEmbed(rawUrl) {
   if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
     if (u.pathname === '/watch') {
       const id = u.searchParams.get('v');
-      return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+      return id ? ytEmbed(id) : null;
     }
     if (u.pathname.startsWith('/shorts/')) {
       const id = u.pathname.replace('/shorts/', '').split('/')[0];
-      return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+      return id ? ytEmbed(id) : null;
     }
     if (u.pathname.startsWith('/embed/')) {
-      return { src: u.toString(), platform: 'YouTube' };
+      const id = u.pathname.replace('/embed/', '').split('/')[0];
+      return ytEmbed(id, u.toString());
     }
   }
   if (host === 'youtu.be') {
     const id = u.pathname.slice(1).split('/')[0];
-    return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+    return id ? ytEmbed(id) : null;
   }
   if (host.endsWith('vimeo.com') && host !== 'player.vimeo.com') {
     const m = u.pathname.match(/^\/(\d+)/);
-    return m ? { src: `https://player.vimeo.com/video/${m[1]}`, platform: 'Vimeo' } : null;
+    return m ? vimeoEmbed(m[1]) : null;
   }
   if (host === 'player.vimeo.com') {
-    return { src: u.toString(), platform: 'Vimeo' };
+    const m = u.pathname.match(/^\/video\/(\d+)/);
+    return m ? vimeoEmbed(m[1], u.toString()) : null;
   }
   return null;
+}
+
+function ytEmbed(id, srcOverride) {
+  return {
+    platform: 'YouTube',
+    videoId:  id,
+    src:      srcOverride || `https://www.youtube.com/embed/${id}`,
+    // YouTube's maxresdefault is the highest-quality thumbnail; falls
+    // back to hqdefault if the channel didn't upload a HD frame.
+    thumbnailUrl: `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`,
+    contentUrl:   `https://www.youtube.com/watch?v=${id}`,
+  };
+}
+function vimeoEmbed(id, srcOverride) {
+  return {
+    platform: 'Vimeo',
+    videoId:  id,
+    src:      srcOverride || `https://player.vimeo.com/video/${id}`,
+    // Vimeo thumbnail URLs aren't directly derivable without an
+    // oEmbed call; leave undefined and let the VideoObject omit it.
+    thumbnailUrl: null,
+    contentUrl:   `https://vimeo.com/${id}`,
+  };
 }
 
 // Compose the video section's view data: embed + right-column copy.
@@ -425,6 +474,11 @@ function buildVideo(project, service, city, hub, homeType, metricVal, metricLab)
     platform: embed.platform,
     heading: 'See the Work',
     body: lines,
+    // Forward the bits VideoObject schema needs.
+    videoId:      embed.videoId,
+    thumbnailUrl: embed.thumbnailUrl,
+    contentUrl:   embed.contentUrl,
+    descriptionText: lines.join(' '),
   };
 }
 

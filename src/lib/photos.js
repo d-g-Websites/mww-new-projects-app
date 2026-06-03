@@ -75,3 +75,18 @@ export async function processExtras({ files, slug, outDir, max = 5 }) {
   }
   return outs;
 }
+
+// Square avatar resizer for tech profile photos. Crops to a 600×600
+// .webp so the published team page renders crisp at any retina
+// density. We don't make it circular here — the template's CSS
+// applies the mask via border-radius, so we keep the source square.
+export async function resizeAvatar(srcPath, destPath) {
+  await mkdir(dirname(destPath), { recursive: true });
+  const input = await loadAsSharpableBuffer(srcPath);
+  await sharp(input)
+    .rotate()
+    .resize(600, 600, { fit: 'cover', position: 'centre' })
+    .webp({ quality: 88 })
+    .toFile(destPath);
+  return destPath;
+}

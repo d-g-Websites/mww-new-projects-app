@@ -57,7 +57,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #4caf50; outline-
 <body>
 <header>
   <a href="/" style="font-weight:700;">MWW Dashboard</a>
-  <form method="post" action="/logout" style="margin:0;"><button type="submit">Log out</button></form>
+  <div style="display:flex;gap:14px;align-items:center;font-size:13px;">
+    {{#if currentUser}}
+    <span style="color:rgba(255,255,255,.7);">Hi, {{currentUser.display_name}}</span>
+    {{#if (eq currentUser.role "admin")}}<a href="/users">Team</a>{{/if}}
+    {{/if}}
+    <form method="post" action="/logout" style="margin:0;"><button type="submit">Log out</button></form>
+  </div>
 </header>
 <main>
 {{{body}}}

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import Handlebars from 'handlebars';
 import { getService, getHub, getCity } from './slug.js';
-import { relatedProjects, listPublished } from './db.js';
+import { relatedProjects, listPublished, getUser } from './db.js';
 
 const TEMPLATE_PATH = join(process.cwd(), 'templates', 'project-page.hbs');
 let TEMPLATE_FN = null;
@@ -102,6 +102,19 @@ function buildSchema(p, service, city, hub) {
       articleBody: (p.narrative || '').replace(/\s+/g, ' ').trim(),
       author:    { '@id': hub.parentOrgUrl },
       publisher: { '@id': hub.parentOrgUrl },
+      // Specific person who delivered the work, when available.
+      // Separate from author (the LocalBusiness) so the business's
+      // entity signals stay concentrated while the tech still gets
+      // attribution credit.
+      ...(p.tech ? {
+        creator: {
+          '@type': 'Person',
+          name: p.tech.name,
+          ...(p.tech.photoUrl ? { image: p.tech.photoUrl } : {}),
+          ...(p.tech.bio ? { description: p.tech.bio } : {}),
+          worksFor: { '@id': hub.parentOrgUrl },
+        },
+      } : {}),
       mainEntityOfPage: { '@id': webpageId },
       about:     { '@id': serviceId },
       locationCreated: {
@@ -307,6 +320,7 @@ function buildView(project, opts = {}) {
     map: buildMap(hub),
     video: buildVideo(project, service, city, hub, homeType, metricVal, metricLab),
     faq:   Array.isArray(project.faq) ? project.faq : [],
+    tech:  buildTech(project),
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
     gallery:   galleryFilenames(project),
@@ -334,6 +348,7 @@ function buildView(project, opts = {}) {
       seoDescription: view.seo.description,
       video:          view.video,
       faq:            view.faq,
+      tech:           view.tech,
     },
     service, city, hub
   );
@@ -463,6 +478,23 @@ function windowScopeTags(extras = {}) {
 
 function plur(n, singular) {
   return n === 1 ? singular : `${singular}s`;
+}
+
+// Look up the submitting tech and shape their data for the project
+// page byline + crew card. Returns null when the project predates the
+// per-user system (submitted_by is null).
+function buildTech(project) {
+  if (!project.submitted_by) return null;
+  const u = getUser(project.submitted_by);
+  if (!u) return null;
+  return {
+    name: u.display_name,
+    username: u.username,
+    bio: u.bio || null,
+    photoUrl: u.photo_filename
+      ? `${SITE_ROOT}/images/team/${u.photo_filename}`
+      : null,
+  };
 }
 
 // Normalize a YouTube / Vimeo URL to its iframe-embed form. Returns

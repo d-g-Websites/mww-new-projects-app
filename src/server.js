@@ -7,6 +7,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
+import usersRouter from './routes/users.js';
+import { loadUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -53,7 +55,9 @@ app.use(session({
   },
 }));
 
+app.use(loadUser);
 app.use('/', authRouter);
+app.use('/', usersRouter);
 app.use('/', projectsRouter);
 
 // Global error handler — surfaces stack only in non-prod.

@@ -363,6 +363,7 @@ router.post('/new',
         address_lat: lat,
         address_lng: lng,
         video_url: b.video_url || null,
+        submitted_by: req.user?.id || null,
       });
 
       const nearbyTowns = findNearestCities(lat, lng, {

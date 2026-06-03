@@ -36,6 +36,18 @@ db.exec(`
     published_at    TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT UNIQUE NOT NULL,
+    display_name  TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'tech',     -- 'admin' | 'tech'
+    password_hash TEXT NOT NULL,
+    photo_filename TEXT,                            -- e.g. "mike.webp"; URL constructed from this
+    bio           TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_projects_status_pub
     ON projects(status, published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_projects_city
@@ -62,6 +74,7 @@ ensureColumn('address_lat', 'REAL');   // job address lat/lng from Google Places
 ensureColumn('address_lng', 'REAL');
 ensureColumn('video_url', 'TEXT');     // optional YouTube / Vimeo URL the tech pastes
 ensureColumn('faq', 'TEXT');           // JSON array of {q, a} pairs for FAQPage schema + on-page section
+ensureColumn('submitted_by', 'INTEGER'); // FK to users.id — who entered this project
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -79,14 +92,14 @@ export function insertDraft(row) {
       review_text, customer_name, review_date, review_url,
       narrative, before_photo, after_photo, extras, extra_photos,
       bullet_facts, customer_note, street, spoke_slug,
-      address_lat, address_lng, video_url
+      address_lat, address_lng, video_url, submitted_by
     ) VALUES (
       @slug, @service, @service_label, @city_slug, @city_name, @hub,
       @address, @home_type, @metric_value, @metric_label, @price, @challenge,
       @review_text, @customer_name, @review_date, @review_url,
       @narrative, @before_photo, @after_photo, @extras, @extra_photos,
       @bullet_facts, @customer_note, @street, @spoke_slug,
-      @address_lat, @address_lng, @video_url
+      @address_lat, @address_lng, @video_url, @submitted_by
     )
   `);
   const info = stmt.run({
@@ -97,6 +110,7 @@ export function insertDraft(row) {
     address_lat: null,
     address_lng: null,
     video_url: null,
+    submitted_by: null,
     ...row,
     extras,
     extra_photos: extraPhotos,
@@ -256,4 +270,41 @@ export function relatedProjects({ excludeId, citySlug, service, limit = 3 }) {
 
 export function slugExists(slug) {
   return !!db.prepare('SELECT 1 FROM projects WHERE slug = ?').get(slug);
+}
+
+// ── Users ────────────────────────────────────────────────────────────
+
+export function listUsers() {
+  return db.prepare('SELECT id, username, display_name, role, photo_filename, bio, created_at FROM users ORDER BY display_name').all();
+}
+
+export function getUser(id) {
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+}
+
+export function getUserByUsername(username) {
+  return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+}
+
+export function createUser({ username, display_name, role, password_hash, photo_filename = null, bio = null }) {
+  const info = db.prepare(`
+    INSERT INTO users (username, display_name, role, password_hash, photo_filename, bio)
+    VALUES (@username, @display_name, @role, @password_hash, @photo_filename, @bio)
+  `).run({ username, display_name, role, password_hash, photo_filename, bio });
+  return info.lastInsertRowid;
+}
+
+export function updateUser(id, patch) {
+  const fields = Object.keys(patch);
+  if (fields.length === 0) return;
+  const set = fields.map(f => `${f} = @${f}`).join(', ');
+  db.prepare(`UPDATE users SET ${set}, updated_at = datetime('now') WHERE id = @id`).run({ ...patch, id });
+}
+
+export function deleteUser(id) {
+  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+}
+
+export function countUsers() {
+  return db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
 }

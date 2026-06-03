@@ -99,15 +99,27 @@ const CHALLENGE_CHOICES = {
     { label: 'Animals in the gutters',     extra: { type: 'text',   name: 'animals_detail', prompt: 'specify what', placeholder: 'e.g. bird nest, raccoon, squirrels' } },
   ],
   'power-washing': [
-    { label: 'Post-construction scraping' },
-    { label: 'Hard water stain removal' },
-    { label: 'Lots of bugs and spiders' },
-    { label: 'Screen repair' },
-    { label: 'Oversized windows' },
-    { label: 'Very tall house' },
-    { label: 'Bushes and trees by the windows' },
-    { label: 'Deep window wells' },
-    { label: 'Need to use ladder inside' },
+    // Surface issues
+    { label: 'Algae on house walls' },
+    { label: 'Moss on the surface' },
+    { label: 'Mildew and black streaks' },
+    { label: 'Oxidized aluminum siding' },
+    { label: 'Efflorescence on brick or concrete' },
+    // Stains
+    { label: 'Oil spots' },
+    { label: 'Rust stains' },
+    { label: 'Tire marks on driveway' },
+    { label: 'Tree sap or pitch' },
+    { label: 'Heavy pollen buildup' },
+    // Conditions
+    { label: 'Very dirty' },
+    { label: 'Cracks holding embedded dirt' },
+    { label: 'Rotted deck boards' },
+    // Approach / handling
+    { label: 'Tall house' },
+    { label: 'Needed to use soap' },
+    { label: 'Needed special chemicals to remove dirt' },
+    { label: 'Delicate plants and landscaping nearby' },
   ],
 };
 

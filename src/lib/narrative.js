@@ -51,21 +51,20 @@ export async function generateNarrative({
   city,            // "Romeoville, IL"
   homeType,        // "3-Story House"
   metric,          // "43 Windows Cleaned"
-  challenge,       // free-text from tech
+  challenges,      // array of structured challenges the tech ticked
   bulletFacts,     // free-text dump of what tech entered
-  customerNote,    // optional, e.g. "annual client"
   extras,          // service-specific structured fields (window types, screens, etc.)
   nearbyTowns,     // array of nearby spoke names for local color
 }) {
+  const challengeList = Array.isArray(challenges) ? challenges : (challenges ? [challenges] : []);
+
   const userPrompt = `Job facts:
 - Service: ${service}
 - Location: ${city}
 - Home type: ${homeType || 'not specified'}
 - Primary metric: ${metric || 'not specified'}
-- Notable challenge: ${challenge || 'none mentioned'}
-- Customer context: ${customerNote || 'none mentioned'}
-- Nearby towns / neighborhoods (for optional local color — only use if it fits naturally): ${nearbyTowns?.length ? nearbyTowns.join(', ') : 'none provided'}
-${formatExtras(extras)}
+- Nearby towns / neighborhoods (use sparingly for local color, only if it fits naturally): ${nearbyTowns?.length ? nearbyTowns.join(', ') : 'none provided'}
+${formatExtras(extras)}${formatChallenges(challengeList)}
 Technician's notes (raw — these are the only facts you have to work with):
 """
 ${bulletFacts || '(none)'}
@@ -95,6 +94,14 @@ Write the two paragraphs now, following the voice guidance in the system prompt.
   // Split into 2 paragraphs for the template.
   const paragraphs = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   return paragraphs;
+}
+
+// Format the checked-challenges list as a labeled section the model
+// can reference. The instruction encourages weaving rather than
+// listing — the writeup shouldn't read like a checklist dump.
+function formatChallenges(challenges) {
+  if (!challenges || challenges.length === 0) return '';
+  return `\nChallenges this job presented (weave naturally into the work paragraph as conditions our crew dealt with — do NOT list them mechanically):\n${challenges.map(c => `- ${c}`).join('\n')}\n`;
 }
 
 // Turn the service-specific extras object into a few bullet lines the

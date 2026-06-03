@@ -66,26 +66,11 @@
   </div>
 
   <div class="field">
-    <label for="challenge">Notable challenge (optional)</label>
-    <input id="challenge" name="challenge" value="{{formValues.challenge}}" placeholder="e.g. North-facing windows, salt residue">
-  </div>
-
-  <div class="field">
     <label for="review_date">Date completed</label>
     <input id="review_date" name="review_date" type="date"
            value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
   </div>
 </div>
-
-<style>
-.check-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
-.check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f5f8fa; border: 1px solid #e0e8f0; border-radius: 8px; font-size: 15px; cursor: pointer; }
-.check-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4caf50; cursor: pointer; flex-shrink: 0; }
-.check-row.has-count { flex-wrap: wrap; }
-.check-row .count-input { flex-basis: 100%; display: none; margin-top: 8px; padding-left: 30px; }
-.check-row .count-input input { width: 120px; padding: 8px 10px; font-size: 15px; border: 1px solid #cfd8dc; border-radius: 6px; background: #fff; }
-.check-row.is-checked .count-input { display: block; }
-</style>
 
 <script>
   // Toggle the "how many" input next to each checkbox-with-count.

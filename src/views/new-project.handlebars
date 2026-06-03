@@ -106,10 +106,21 @@
 - frames and tracks wiped
 - 4 hours total">{{formValues.bullet_facts}}</textarea>
     </div>
+
+    {{#if challengeChoices.length}}
     <div class="field">
-      <label for="customer_note">Customer context (optional)</label>
-      <input id="customer_note" name="customer_note" value="{{formValues.customer_note}}" placeholder="e.g. annual client, found us on Google">
+      <label>Challenges faced on this job <small style="color:#8a9db0;font-weight:400;">(check all that apply)</small></label>
+      <div class="check-grid">
+        {{#each challengeChoices}}
+        <label class="check-row">
+          <input type="checkbox" name="challenges" value="{{this}}" {{#if (includes ../formValues.challenges this)}}checked{{/if}}>
+          <span>{{this}}</span>
+        </label>
+        {{/each}}
+      </div>
+      <small>The AI weaves these into the second paragraph as the conditions our crew worked through.</small>
     </div>
+    {{/if}}
   </div>
 
   <button type="submit" class="btn btn-block" id="submit-btn" disabled>Pick an address first</button>

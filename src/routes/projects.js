@@ -49,6 +49,26 @@ const DETAILS_PARTIALS = {
   'power-washing':   'details-generic',
 };
 
+// Per-service common challenges. Surfaced as checkboxes in Section 5
+// ("What we did"). Whatever the tech ticks is fed to the narrative as
+// "challenges encountered" so the work paragraph names them naturally.
+// Gutter / power get their own lists when we build those forms.
+const CHALLENGE_CHOICES = {
+  'window-cleaning': [
+    'Post-construction scraping',
+    'Hard water stain removal',
+    'Lots of bugs and spiders',
+    'Screen repair',
+    'Oversized windows',
+    'Very tall house',
+    'Bushes and trees by the windows',
+    'Deep window wells',
+    'Need to use ladder inside',
+  ],
+  'gutter-cleaning': [],
+  'power-washing':   [],
+};
+
 // ── Step 2: fill in the actual details for the chosen service. ──
 router.get('/new/details', (req, res) => {
   const service = getService(req.query.service);
@@ -56,6 +76,7 @@ router.get('/new/details', (req, res) => {
   res.render('new-project', {
     service,
     detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
+    challengeChoices: CHALLENGE_CHOICES[service.value] || [],
     today: new Date().toISOString().slice(0, 10),
     googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
   });
@@ -65,8 +86,9 @@ router.get('/new/details', (req, res) => {
 // into a single `extras` object that gets JSON-serialized to the DB.
 // Keep this in lock-step with the partials in src/views/partials/.
 function collectExtras(serviceValue, b) {
+  const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
+  const challenges = arr(b.challenges);
   if (serviceValue === 'window-cleaning') {
-    const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
     const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
     return {
       serviceType:  b.service_type || null,
@@ -76,9 +98,10 @@ function collectExtras(serviceValue, b) {
       skylights:     b.skylights      ? intOrNull(b.skylights_count)      : null,
       windowWells:   b.window_wells   ? intOrNull(b.window_wells_count)   : null,
       tracksFrames:  !!b.tracks_frames,
+      challenges,
     };
   }
-  return {};
+  return { challenges };
 }
 
 // ── Submit form: validate, save photos, save draft, generate narrative,
@@ -100,6 +123,7 @@ router.post('/new',
       return res.render('new-project', {
         service: svc,
         detailsPartial: DETAILS_PARTIALS[svc.value] || 'details-generic',
+        challengeChoices: CHALLENGE_CHOICES[svc.value] || [],
         today: new Date().toISOString().slice(0, 10),
         formValues: b,
         googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -133,6 +157,7 @@ router.post('/new',
         return res.status(409).render('new-project', {
           service,
           detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
+          challengeChoices: CHALLENGE_CHOICES[service.value] || [],
           today: b.review_date,
           formValues: b,
           googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -223,9 +248,8 @@ router.post('/new',
           city:     `${city.name}, IL`,
           homeType: b.home_type,
           metric:   `${b.metric_value || ''} ${b.metric_label || ''}`.trim(),
-          challenge:    b.challenge,
-          bulletFacts:  b.bullet_facts,
-          customerNote: b.customer_note,
+          challenges: extras.challenges || [],
+          bulletFacts: b.bullet_facts,
           extras,
           nearbyTowns,
         });
@@ -262,10 +286,12 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
       city:     `${p.city_name}, IL`,
       homeType: p.home_type,
       metric:   `${p.metric_value || ''} ${p.metric_label || ''}`.trim(),
-      challenge:    p.challenge,
-      bulletFacts:  p.bullet_facts,
-      customerNote: p.customer_note,
-      extras:       p.extras,
+      // Prefer the structured challenges from extras; fall back to the
+      // legacy free-text `challenge` column for drafts created before
+      // the checklist existed.
+      challenges:  (p.extras && p.extras.challenges) || (p.challenge ? [p.challenge] : []),
+      bulletFacts: p.bullet_facts,
+      extras:      p.extras,
       nearbyTowns,
     });
     updateDraft(p.id, { narrative: paragraphs.join('\n\n') });

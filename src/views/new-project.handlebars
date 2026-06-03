@@ -75,6 +75,16 @@
         <input id="extra-5" name="extras" type="file" accept="image/*" capture="environment">
       </div>
     </div>
+
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid #e0e8f0;">
+      <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 4px;">Project video <small style="color:#8a9db0;font-weight:400;">(optional)</small></p>
+      <p style="font-size:12px;color:#8a9db0;margin:0 0 12px;">Paste a YouTube or Vimeo link. Upload your clip to YouTube/Vimeo first, then put the share URL here.</p>
+      <div class="field">
+        <label for="video_url">Video URL</label>
+        <input id="video_url" name="video_url" type="url" value="{{formValues.video_url}}"
+               placeholder="https://youtu.be/… or https://vimeo.com/…">
+      </div>
+    </div>
   </div>
 
   <div class="card">

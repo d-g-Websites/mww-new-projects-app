@@ -233,6 +233,7 @@ router.post('/new',
         spoke_slug: city.spokeSlug || city.slug,
         address_lat: lat,
         address_lng: lng,
+        video_url: b.video_url || null,
       });
 
       const nearbyTowns = findNearestCities(lat, lng, {

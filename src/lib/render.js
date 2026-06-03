@@ -269,6 +269,7 @@ function buildView(project, opts = {}) {
     related,
     footerRecent,
     map: buildMap(hub),
+    video: buildVideo(project, service, city, hub, homeType, metricVal, metricLab),
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
     gallery:   galleryFilenames(project),
@@ -368,6 +369,63 @@ function windowScopeTags(extras = {}) {
 
 function plur(n, singular) {
   return n === 1 ? singular : `${singular}s`;
+}
+
+// Normalize a YouTube / Vimeo URL to its iframe-embed form. Returns
+// null for anything we don't recognize so the section stays hidden
+// rather than embedding a broken iframe.
+function videoEmbed(rawUrl) {
+  if (!rawUrl) return null;
+  let u;
+  try { u = new URL(rawUrl); } catch { return null; }
+  const host = u.host.toLowerCase();
+
+  if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+    if (u.pathname === '/watch') {
+      const id = u.searchParams.get('v');
+      return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+    }
+    if (u.pathname.startsWith('/shorts/')) {
+      const id = u.pathname.replace('/shorts/', '').split('/')[0];
+      return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+    }
+    if (u.pathname.startsWith('/embed/')) {
+      return { src: u.toString(), platform: 'YouTube' };
+    }
+  }
+  if (host === 'youtu.be') {
+    const id = u.pathname.slice(1).split('/')[0];
+    return id ? { src: `https://www.youtube.com/embed/${id}`, platform: 'YouTube' } : null;
+  }
+  if (host.endsWith('vimeo.com') && host !== 'player.vimeo.com') {
+    const m = u.pathname.match(/^\/(\d+)/);
+    return m ? { src: `https://player.vimeo.com/video/${m[1]}`, platform: 'Vimeo' } : null;
+  }
+  if (host === 'player.vimeo.com') {
+    return { src: u.toString(), platform: 'Vimeo' };
+  }
+  return null;
+}
+
+// Compose the video section's view data: embed + right-column copy.
+// The copy uses the project's own facts so each page reads
+// specifically rather than generically.
+function buildVideo(project, service, city, hub, homeType, metricVal, metricLab) {
+  const embed = videoEmbed(project.video_url);
+  if (!embed) return null;
+  const lines = [];
+  lines.push(`Our ${hub.name} crew filmed this ${service.label.toLowerCase()} on site at a ${homeType.toLowerCase()} in ${city.name}, IL.`);
+  if (metricVal && metricLab) {
+    lines.push(`You'll see the workflow across all ${metricVal} ${metricLab.toLowerCase()} — interior and exterior approach, screen and frame detail, the rhythm of how we work through a property like this without leaving a mess.`);
+  } else {
+    lines.push(`The clip walks through how we approached the property — equipment setup, method on each side of the glass, and the tidy-up at the end.`);
+  }
+  return {
+    src: embed.src,
+    platform: embed.platform,
+    heading: 'See the Work',
+    body: lines,
+  };
 }
 
 // Normalize the price string the tech typed: accept "$290", "290",

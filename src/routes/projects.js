@@ -45,14 +45,15 @@ router.get('/new', (req, res) => {
 // gutter + power working unchanged until they get their own.
 const DETAILS_PARTIALS = {
   'window-cleaning': 'details-window-cleaning',
-  'gutter-cleaning': 'details-generic',
+  'gutter-cleaning': 'details-gutter-cleaning',
   'power-washing':   'details-generic',
 };
 
 // Per-service common challenges. Surfaced as checkboxes in Section 5
 // ("What we did"). Whatever the tech ticks is fed to the narrative as
 // "challenges encountered" so the work paragraph names them naturally.
-// Gutter / power get their own lists when we build those forms.
+// Gutter cleaning starts as a clone of window cleaning's list — will
+// be tailored down to gutter-specific challenges next.
 const CHALLENGE_CHOICES = {
   'window-cleaning': [
     'Post-construction scraping',
@@ -65,7 +66,17 @@ const CHALLENGE_CHOICES = {
     'Deep window wells',
     'Need to use ladder inside',
   ],
-  'gutter-cleaning': [],
+  'gutter-cleaning': [
+    'Post-construction scraping',
+    'Hard water stain removal',
+    'Lots of bugs and spiders',
+    'Screen repair',
+    'Oversized windows',
+    'Very tall house',
+    'Bushes and trees by the windows',
+    'Deep window wells',
+    'Need to use ladder inside',
+  ],
   'power-washing':   [],
 };
 
@@ -87,9 +98,12 @@ router.get('/new/details', (req, res) => {
 // Keep this in lock-step with the partials in src/views/partials/.
 function collectExtras(serviceValue, b) {
   const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
+  const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
   const challenges = arr(b.challenges);
-  if (serviceValue === 'window-cleaning') {
-    const intOrNull = v => (v && /^\d+$/.test(String(v))) ? parseInt(v, 10) : null;
+  if (serviceValue === 'window-cleaning' || serviceValue === 'gutter-cleaning') {
+    // Gutter cleaning currently uses the same form shape as window
+    // cleaning. The field names will get renamed and the schema will
+    // diverge as we tailor the gutter form.
     return {
       serviceType:  b.service_type || null,
       windowTypes:  arr(b.window_types),

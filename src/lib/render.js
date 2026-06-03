@@ -352,9 +352,11 @@ function defaultServiceLevel(serviceVal) {
 // grow their own service-specific form.
 function scopeTagsFor(serviceVal, extras) {
   if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
-  if (serviceVal === 'gutter-cleaning') {
-    return ['Gutter Hand-Clearing', 'Downspout Flushing', 'Debris Bagging & Removal', 'Photo Documentation'];
-  }
+  // Gutter cleaning starts as a clone of window-cleaning's logic.
+  // The tags will get renamed and the inputs will diverge as we
+  // tailor the gutter form (e.g. linear feet, downspouts, leaf
+  // density, etc.).
+  if (serviceVal === 'gutter-cleaning') return windowScopeTags(extras);
   if (serviceVal === 'power-washing') {
     return ['Soft Washing', 'Driveway Cleaning', 'Siding Wash', 'Algae & Mildew Treatment'];
   }

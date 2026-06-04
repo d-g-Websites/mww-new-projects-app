@@ -1,0 +1,102 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 4px;flex-wrap:wrap;gap:10px;">
+  <h2 style="margin:0;">Edit project</h2>
+  <a class="btn btn-outline" href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank" rel="noopener" style="padding:8px 14px;font-size:13px;">View live →</a>
+</div>
+<p class="muted" style="font-size:13px;">{{project.service_label}} — {{project.city_name}}, IL · Slug: <code>{{project.slug}}</code></p>
+<p class="muted" style="font-size:12px;">Published {{project.published_at}}. Slug / service / city / date are locked — to change them, delete and recreate.</p>
+
+<div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;">
+  <form method="post" action="/projects/{{project.id}}/regenerate-narrative" style="margin:0;">
+    <button type="submit" class="btn btn-outline" style="font-size:14px;padding:9px 16px;">⟳ Regenerate narrative</button>
+  </form>
+  <form method="post" action="/projects/{{project.id}}/regenerate-faq" style="margin:0;">
+    <button type="submit" class="btn btn-outline" style="font-size:14px;padding:9px 16px;">⟳ Regenerate FAQ</button>
+  </form>
+</div>
+<p class="muted" style="font-size:12px;">Regenerate buttons immediately rewrite the live page with the new AI output.</p>
+
+<form method="post" action="/projects/{{project.id}}/edit" enctype="multipart/form-data">
+
+  <div class="card">
+    <h2>Narrative</h2>
+    <textarea name="narrative" rows="14" style="font-family:inherit;">{{project.narrative}}</textarea>
+  </div>
+
+  <div class="card">
+    <h2>Customer review</h2>
+    <div class="field">
+      <label for="customer_name">Customer name</label>
+      <input id="customer_name" name="customer_name" value="{{project.customer_name}}">
+    </div>
+    <div class="field">
+      <label for="review_url">Review link (Google or Yelp)</label>
+      <input id="review_url" name="review_url" type="url" value="{{project.review_url}}">
+    </div>
+    <div class="field">
+      <label for="review_text">Review text</label>
+      <textarea id="review_text" name="review_text" rows="5">{{project.review_text}}</textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Photos</h2>
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Replace before/after by uploading a new file. Leave blank to keep the current photo. Gallery photos aren't editable here yet.</p>
+    <div class="field">
+      <label for="before">Before photo (current: <a href="https://www.mywindowwashing.com/projects/img/{{project.slug}}-before.webp" target="_blank">view</a>)</label>
+      <input id="before" name="before" type="file" accept="image/*" capture="environment">
+    </div>
+    <div class="field">
+      <label for="after">After photo (current: <a href="https://www.mywindowwashing.com/projects/img/{{project.slug}}-after.webp" target="_blank">view</a>)</label>
+      <input id="after" name="after" type="file" accept="image/*" capture="environment">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Video</h2>
+    <div class="field">
+      <label for="video_url">Video URL (YouTube or Vimeo)</label>
+      <input id="video_url" name="video_url" type="url" value="{{project.video_url}}" placeholder="https://youtu.be/…">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Details</h2>
+    <div class="field">
+      <label for="home_type">Home type</label>
+      <input id="home_type" name="home_type" value="{{project.home_type}}">
+    </div>
+    <div class="field">
+      <label for="price">Price</label>
+      <input id="price" name="price" value="{{project.price}}">
+    </div>
+    <div class="field">
+      <label for="street">Street name</label>
+      <input id="street" name="street" value="{{project.street}}">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bullet notes</h2>
+    <p class="muted" style="font-size:13px;margin:-8px 0 8px;">These are the inputs that feed narrative regeneration. Edit + regenerate to get a different narrative.</p>
+    <textarea name="bullet_facts" rows="6" style="font-family:inherit;">{{project.bullet_facts}}</textarea>
+  </div>
+
+  {{#if challengeChoices.length}}
+  <div class="card">
+    <h2>Challenges</h2>
+    <p class="muted" style="font-size:13px;margin:-8px 0 8px;">Check the ones to include when regenerating the narrative.</p>
+    <div class="check-grid">
+      {{#each challengeChoices}}
+      <label class="check-row">
+        <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../project.extras.challenges label)}}checked{{/if}}>
+        <span>{{label}}</span>
+      </label>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  <button type="submit" class="btn btn-block">Save changes &amp; update live site</button>
+</form>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>

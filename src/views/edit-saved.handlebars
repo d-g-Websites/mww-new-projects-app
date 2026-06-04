@@ -1,0 +1,15 @@
+<div class="alert alert-success">
+  <strong>Saved.</strong> Commit <code>{{result.git.sha}}</code> {{#if result.pushed}}pushed to origin.{{else}}NOT pushed (SITE_REPO_PUSH=false).{{/if}}
+</div>
+
+<div class="card">
+  <h2>{{project.service_label}} — {{project.city_name}}, IL</h2>
+  <p>Live URL (after cPanel pulls): <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">/projects/{{project.slug}}</a></p>
+  <ul class="list">
+    <li>Rewrote <code>{{result.projectPath}}</code></li>
+    <li>Regenerated {{result.archives.length}} archive page{{#unless (eq result.archives.length 1)}}s{{/unless}}</li>
+  </ul>
+</div>
+
+<a class="btn btn-outline btn-block" href="/projects/{{project.id}}/edit" style="text-align:center;">Edit again</a>
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:10px;">Back to dashboard</a>

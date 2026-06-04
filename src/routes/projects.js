@@ -15,7 +15,8 @@ import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
 import { generateFaq } from '../lib/faq.js';
 import { renderProjectHtml } from '../lib/render.js';
-import { publishProject } from './publish.js';
+import { publishProject, republishProject } from './publish.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -423,9 +424,6 @@ router.post('/projects/:id/regenerate-faq', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
-    if (p.status === 'published') {
-      return res.status(409).render('error', { message: 'Already published — cannot regenerate.' });
-    }
     const hubObj = getHub(p.hub) || { name: p.hub, phone: '' };
     const faq = await generateFaq({
       service:      p.service_label,
@@ -440,6 +438,12 @@ router.post('/projects/:id/regenerate-faq', async (req, res, next) => {
       serviceValue: p.service,
     });
     updateDraft(p.id, { faq: JSON.stringify(faq) });
+    // For published projects, also push the new FAQ to the live site.
+    if (p.status === 'published') {
+      const fresh = getProject(p.id);
+      await republishProject(fresh);
+      return res.redirect(`/projects/${p.id}/edit`);
+    }
     res.redirect(`/projects/${p.id}/preview`);
   } catch (err) {
     console.error(`[faq regen] failed for project ${req.params.id}:`, err.message);
@@ -454,9 +458,6 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
-    if (p.status === 'published') {
-      return res.status(409).render('error', { message: 'Already published — cannot regenerate.' });
-    }
     const nearbyTowns = findNearestCities(p.address_lat, p.address_lng, {
       count: 3,
       excludeSlugs: [p.city_slug, p.spoke_slug].filter(Boolean),
@@ -474,6 +475,12 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
       nearbyTowns,
     });
     updateDraft(p.id, { narrative: paragraphs.join('\n\n') });
+    // For published projects, also push the new narrative to the live site.
+    if (p.status === 'published') {
+      const fresh = getProject(p.id);
+      await republishProject(fresh);
+      return res.redirect(`/projects/${p.id}/edit`);
+    }
     res.redirect(`/projects/${p.id}/preview`);
   } catch (err) {
     console.error(`[narrative regen] failed for project ${req.params.id}:`, err.message);
@@ -508,6 +515,90 @@ router.get('/projects/:id/preview/iframe', (req, res) => {
   if (!p) return res.status(404).send('not found');
   res.type('html').send(renderProjectHtml(p));
 });
+
+// ── Admin edit for already-published projects ───────────────────────
+// GET shows a pre-filled form covering the most-commonly-edited
+// fields. POST runs republishProject() which rewrites the project
+// HTML + relevant archives + sitemap, then commits + pushes. Locked
+// fields (slug, service, city, date) require delete+recreate.
+router.get('/projects/:id/edit', requireAdmin, (req, res) => {
+  const p = getProject(Number(req.params.id));
+  if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+  if (p.status !== 'published') {
+    return res.redirect(`/projects/${p.id}/preview`);
+  }
+  res.render('edit-project', {
+    project: p,
+    formValues: p,
+    challengeChoices: CHALLENGE_CHOICES[p.service] || [],
+  });
+});
+
+router.post('/projects/:id/edit',
+  requireAdmin,
+  upload.fields([
+    { name: 'before', maxCount: 1 },
+    { name: 'after',  maxCount: 1 },
+  ]),
+  async (req, res, next) => {
+    try {
+      const p = getProject(Number(req.params.id));
+      if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+      if (p.status !== 'published') {
+        return res.status(400).render('error', { message: 'Only published projects can be edited here. Use the preview screen for drafts.' });
+      }
+      const b = req.body;
+      const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
+
+      // Always-updatable text fields. Service-specific extras (window
+      // types, surfaces, etc.) stay locked for now — they'd need
+      // service-specific UI to edit safely.
+      const patch = {
+        narrative:     b.narrative ?? p.narrative,
+        review_text:   b.review_text || null,
+        review_url:    b.review_url  || null,
+        customer_name: b.customer_name || null,
+        video_url:     b.video_url || null,
+        price:         b.price || null,
+        street:        b.street || null,
+        home_type:     b.home_type || null,
+        bullet_facts:  b.bullet_facts || null,
+      };
+      // Challenges only — merged back into the existing extras JSON so
+      // the rest of the service-specific shape (window types, etc.)
+      // stays untouched.
+      const newExtras = { ...(p.extras || {}), challenges: arr(b.challenges) };
+      patch.extras = JSON.stringify(newExtras);
+
+      updateDraft(p.id, patch);
+
+      // Process photo replacements if uploaded. We resize into the
+      // same staged path so subsequent republishes / regenerates see
+      // the current photo too.
+      const stagedDir = join(process.cwd(), 'tmp', 'staged', p.slug);
+      mkdirSync(stagedDir, { recursive: true });
+      const replacedPhotos = {};
+      if (req.files?.before?.[0]) {
+        const out = join(stagedDir, `${p.slug}-before.webp`);
+        await (await import('../lib/photos.js')).resizeToWebp(req.files.before[0].path, out);
+        replacedPhotos.before = out;
+        updateDraft(p.id, { before_photo: out });
+      }
+      if (req.files?.after?.[0]) {
+        const out = join(stagedDir, `${p.slug}-after.webp`);
+        await (await import('../lib/photos.js')).resizeToWebp(req.files.after[0].path, out);
+        replacedPhotos.after = out;
+        updateDraft(p.id, { after_photo: out });
+      }
+
+      // Re-render the project HTML and push.
+      const fresh = getProject(p.id);
+      const result = await republishProject(fresh, { replacedPhotos });
+      res.render('edit-saved', { project: fresh, result });
+    } catch (err) {
+      next(err);
+    }
+  });
 
 // Tech's "Save" button — moves the project from draft to pending and
 // pings the admin via Telegram. No git operations yet.

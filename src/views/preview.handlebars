@@ -60,4 +60,7 @@
 </form>
 {{else}}
 <div class="alert alert-success">Already published. <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">View live</a></div>
+{{#if currentUser}}{{#if (eq currentUser.role "admin")}}
+<a class="btn btn-block" href="/projects/{{project.id}}/edit" style="text-align:center;">Edit project</a>
+{{/if}}{{/if}}
 {{/if}}

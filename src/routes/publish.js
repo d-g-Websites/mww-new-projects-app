@@ -121,3 +121,67 @@ export async function publishProject(project) {
 function relTo(repo, abs) {
   return abs.startsWith(repo) ? abs.slice(repo.length + 1) : abs;
 }
+
+// Re-render + re-publish an already-published project after an admin
+// edit. Same pipeline as publishProject minus two things:
+//   - no spoke-page tile patch (tile is already there from the
+//     original publish; re-patching would prepend a duplicate)
+//   - no markPublished (status is already 'published' and we want to
+//     preserve the original published_at)
+// Newly uploaded photos (passed as { before, after, extras } absolute
+// paths) get copied over the existing files at the same filenames.
+export async function republishProject(project, { replacedPhotos = {} } = {}) {
+  const siteRepo = process.env.SITE_REPO_PATH;
+  const branch   = process.env.SITE_REPO_BRANCH || 'master';
+  const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
+  if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
+
+  // Re-render the project HTML — picks up every edited field.
+  const projectPath = writeProjectPage(siteRepo, project);
+
+  // Copy any replacement photos over the live ones. Unchanged photo
+  // slots stay as-is in the static site repo.
+  const imgDir = join(siteRepo, 'projects', 'img');
+  mkdirSync(imgDir, { recursive: true });
+  const touchedPhotos = [];
+  if (replacedPhotos.before && existsSync(replacedPhotos.before)) {
+    const dest = join(imgDir, `${project.slug}-before.webp`);
+    copyFileSync(replacedPhotos.before, dest);
+    touchedPhotos.push(dest);
+  }
+  if (replacedPhotos.after && existsSync(replacedPhotos.after)) {
+    const dest = join(imgDir, `${project.slug}-after.webp`);
+    copyFileSync(replacedPhotos.after, dest);
+    touchedPhotos.push(dest);
+  }
+
+  // Regenerate archives that reference this project's content (the
+  // hero card thumb + title might have changed; price + service-type
+  // updates flow into the archive cards' meta too).
+  const archivePaths = writeAffectedArchives(siteRepo, project);
+
+  // Refresh the sitemap lastmod for this project + archive URLs.
+  const today = new Date().toISOString().slice(0, 10);
+  updateSitemap(siteRepo, project, today);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  const sitemapPath = join(siteRepo, 'sitemap.xml');
+
+  const files = [
+    relTo(siteRepo, projectPath),
+    relTo(siteRepo, sitemapPath),
+    ...touchedPhotos.map(p => relTo(siteRepo, p)),
+    ...archivePaths.map(p => relTo(siteRepo, p)),
+  ];
+
+  const git = await commitAndPush({
+    siteRepoPath: siteRepo,
+    branch,
+    files,
+    message: `Edit project: ${project.slug}`,
+    push: pushFlag,
+  });
+
+  return { projectPath: basename(projectPath), archives: archivePaths.map(p => basename(p)), git, pushed: pushFlag };
+}

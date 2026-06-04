@@ -67,11 +67,16 @@
   {{#if recent.length}}
   <ul class="list">
     {{#each recent}}
-    <li>
-      <strong>{{service_label}} — {{city_name}}, IL</strong>
-      <div class="muted" style="font-size:13px;">
-        <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank">/{{slug}}</a> · {{published_at}}
+    <li style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <strong>{{service_label}} — {{city_name}}, IL</strong>
+        <div class="muted" style="font-size:13px;">
+          <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank">/{{slug}}</a> · {{published_at}}
+        </div>
       </div>
+      {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
+      <a class="btn btn-outline" href="/projects/{{id}}/edit" style="padding:8px 14px;font-size:13px;">Edit</a>
+      {{/if}}{{/if}}
     </li>
     {{/each}}
   </ul>

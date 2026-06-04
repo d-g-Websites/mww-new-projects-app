@@ -35,13 +35,22 @@ fi
 DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+cd "$BACKUP_REPO"
+
+# Detect the branch the local clone is on (master on older git
+# installs, main on newer ones) so we push to whichever the remote
+# expects. Works even on an unborn branch (empty repo, no commits
+# yet) because HEAD still points at refs/heads/<branch>.
+LOCAL_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo master)
+
 # Make sure local clone is up to date in case someone pushed
 # (admin restoring on another machine, etc.) — prevents push
-# rejection. Failures here aren't fatal; we proceed with what we
-# have and let the push retry handle it.
-cd "$BACKUP_REPO"
-git fetch origin --quiet || log "git fetch failed (will try to push anyway)"
-git reset --hard origin/master --quiet || true
+# rejection. Skip silently if origin has no commits yet (empty
+# repo on first backup).
+git fetch origin --quiet 2>/dev/null || true
+if git rev-parse --verify --quiet "origin/$LOCAL_BRANCH" >/dev/null; then
+  git reset --hard "origin/$LOCAL_BRANCH" --quiet || true
+fi
 
 # SQLite supports concurrent reads during a .dump even while the
 # dashboard is live writing. The dump is a snapshot at start time.
@@ -88,9 +97,11 @@ fi
 
 git commit -m "DB backup $TIMESTAMP" --quiet
 
-# Retry push a few times on transient network errors.
+# Retry push a few times on transient network errors. Use -u so the
+# upstream tracking gets set on the first run; subsequent pushes
+# just need 'git push'.
 for attempt in 1 2 3 4; do
-  if git push origin master --quiet; then
+  if git push -u origin "$LOCAL_BRANCH" --quiet; then
     log "backup pushed (attempt $attempt)"
     exit 0
   fi

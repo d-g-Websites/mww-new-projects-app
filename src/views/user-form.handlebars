@@ -39,12 +39,13 @@
     <div class="field">
       <label for="photo">Photo {{#if user.photo_filename}}(currently uploaded){{else}}(optional){{/if}}</label>
       <input id="photo" name="photo" type="file" accept="image/*">
-      <small>Resized to 600×600 .webp and pushed to the live site at <code>images/team/&lt;username&gt;.webp</code>.</small>
-      {{#if user.photo_filename}}
-      <div style="margin-top:10px;">
-        <img src="https://www.mywindowwashing.com/images/team/{{user.photo_filename}}" alt="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:1px solid #e0e8f0;">
+      <div class="photo-preview">
+        {{#if user.photo_filename}}
+          <img src="https://www.mywindowwashing.com/images/team/{{user.photo_filename}}" alt="Current photo">
+          <span class="existing-tag">Currently live</span>
+        {{/if}}
       </div>
-      {{/if}}
+      <small>Resized to 600×600 .webp and pushed to the live site at <code>images/team/&lt;username&gt;.webp</code>.</small>
     </div>
   </div>
 

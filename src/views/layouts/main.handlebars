@@ -48,6 +48,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #4caf50; outline-
 .sub-field { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #595959; padding: 4px 0 8px; border-bottom: 1px dashed #e0e8f0; margin-bottom: 6px; }
 .sub-field label { margin: 0; }
 .sub-field select { width: auto; padding: 6px 10px; font-size: 14px; border: 1px solid #cfd8dc; border-radius: 6px; background: #fff; }
+
+/* Photo previews — shown immediately after file selection so the
+   tech can verify they picked the right shot. */
+.photo-preview { margin-top: 8px; }
+.photo-preview img { display: block; width: 100%; max-width: 240px; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e8f0; background: #f5f8fa; }
+.photo-preview .heic-note { display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; background: #fff3e0; border: 1px solid #ffcc80; color: #7a4400; border-radius: 8px; font-size: 13px; line-height: 1.5; max-width: 320px; }
+.photo-preview .existing-tag { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; color: #8a9db0; text-transform: uppercase; letter-spacing: .4px; }
 .list { list-style: none; padding: 0; margin: 0; }
 .list li { padding: 12px 0; border-bottom: 1px solid #e0e8f0; }
 .list li:last-child { border: none; }
@@ -68,5 +75,32 @@ input:focus, select:focus, textarea:focus { outline: 2px solid #4caf50; outline-
 <main>
 {{{body}}}
 </main>
+<script>
+  // Live thumbnail previews for any image-file input on the page.
+  // Looks for a sibling .photo-preview div inside the input's .field
+  // wrapper. iPhone HEIC files render as a friendly note instead of
+  // a broken <img> since browsers can't decode HEIC inline.
+  (function () {
+    function isHeic(file) {
+      return /heic|heif/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '');
+    }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); }
+    document.querySelectorAll('input[type="file"]').forEach(function (input) {
+      if (input.accept && input.accept.indexOf('image') === -1) return;
+      var preview = input.parentNode && input.parentNode.querySelector('.photo-preview');
+      if (!preview) return;
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) { preview.innerHTML = ''; return; }
+        if (isHeic(file)) {
+          preview.innerHTML = '<div class="heic-note">📷 <strong>' + esc(file.name) + '</strong><br>Apple HEIC format — we\'ll convert it to a web-friendly photo on upload. (No inline preview available.)</div>';
+          return;
+        }
+        var url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="preview">';
+      });
+    });
+  })();
+</script>
 </body>
 </html>

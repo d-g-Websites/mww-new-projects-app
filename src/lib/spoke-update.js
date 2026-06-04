@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import * as cheerio from 'cheerio';
-import { getService } from './slug.js';
+import { getService, getCity } from './slug.js';
 
 // Update the spoke page's "Recent Projects" tile block and footer
 // "Recent Projects" list. Strategy from the handoff:
@@ -53,27 +53,13 @@ export function updateSpokePage(siteRepoPath, citySlug, project, opts = {}) {
     }
   }
 
-  // "View all N completed projects in [City] →" link below the
-  // tile grid. The 4th-and-older tiles fall off the grid but stay
-  // reachable through this link → the per-spoke archive page.
-  // Idempotent: replaces any existing .projects-view-all block.
-  const cityName = (project.city_name || titleCase(citySlug));
-  const count = opts.projectCount ?? 0;
-  const viewAllHtml = `
-    <div class="projects-view-all" style="margin-top:24px;text-align:center;">
-      <a href="${archiveHref}" style="display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#133047;text-decoration:none;padding:10px 22px;border:2px solid #133047;border-radius:8px;transition:background .15s,color .15s;"
-         onmouseover="this.style.background='#133047';this.style.color='#fff';"
-         onmouseout="this.style.background='';this.style.color='#133047';">
-        View all ${count} completed project${count === 1 ? '' : 's'} in ${escapeHtml(cityName)}
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </a>
-    </div>`;
-  const $existingViewAll = $('.project-cards').nextAll('.projects-view-all').first();
-  if ($existingViewAll.length) {
-    $existingViewAll.replaceWith(viewAllHtml);
-  } else {
-    $('.project-cards').after(viewAllHtml);
-  }
+  // Insert or refresh the "View all N projects in [City] →" link
+  // below the tile grid. Always present so older projects displaced
+  // from the tile grid stay reachable, and so the per-spoke archive
+  // gets an internal link from the spoke page itself.
+  const cityName = (project.city_name || resolveCityName(citySlug));
+  const count    = opts.projectCount ?? 0;
+  injectViewAllLink($, citySlug, cityName, count);
 
   // Footer "Recent Projects" column — find the <ul> following the
   // <h4>Recent Projects</h4> header and prepend a list item (after the
@@ -100,6 +86,59 @@ export function updateSpokePage(siteRepoPath, citySlug, project, opts = {}) {
 
   writeFileSync(spokePath, $.html(), 'utf8');
   return { skipped: false, replacedIndex };
+}
+
+// Standalone "View all" link refresher — runs without touching the
+// tile grid or the footer column. Used by the sync-spoke-view-all
+// script to backfill spoke pages that have never received a project
+// publish (where the link wouldn't otherwise be present).
+export function updateSpokeViewAllOnly(siteRepoPath, citySlug, projectCount) {
+  const spokePath = join(siteRepoPath, `${citySlug}.html`);
+  if (!existsSync(spokePath)) {
+    return { skipped: true, reason: `no spoke page at ${spokePath}` };
+  }
+  const html = readFileSync(spokePath, 'utf8');
+  const $ = cheerio.load(html, { decodeEntities: false });
+  if ($('.project-cards').length === 0) {
+    return { skipped: true, reason: 'no .project-cards section' };
+  }
+  const cityName = resolveCityName(citySlug);
+  injectViewAllLink($, citySlug, cityName, projectCount);
+  const next = $.html();
+  if (next === html) return { skipped: true, reason: 'unchanged' };
+  writeFileSync(spokePath, next, 'utf8');
+  return { updated: true, projectCount, cityName };
+}
+
+function resolveCityName(citySlug) {
+  const known = getCity(citySlug);
+  return known?.name || titleCase(citySlug);
+}
+
+// Render + insert/replace the "View all" link block. When projectCount
+// is 0 (spoke has nothing in the dashboard yet), point at the master
+// archive instead of the per-spoke archive page (which doesn't exist
+// when there are no projects to populate it).
+function injectViewAllLink($, citySlug, cityName, count) {
+  const href  = count > 0 ? `projects/${citySlug}` : `projects/`;
+  const label = count > 0
+    ? `View all ${count} completed project${count === 1 ? '' : 's'} in ${cityName}`
+    : `Browse all our completed projects`;
+  const html = `
+    <div class="projects-view-all" style="margin-top:24px;text-align:center;">
+      <a href="${escapeAttr(href)}" style="display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#133047;text-decoration:none;padding:10px 22px;border:2px solid #133047;border-radius:8px;transition:background .15s,color .15s;"
+         onmouseover="this.style.background='#133047';this.style.color='#fff';"
+         onmouseout="this.style.background='';this.style.color='#133047';">
+        ${escapeHtml(label)}
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    </div>`;
+  const $existing = $('.project-cards').nextAll('.projects-view-all').first();
+  if ($existing.length) {
+    $existing.replaceWith(html);
+  } else {
+    $('.project-cards').after(html);
+  }
 }
 
 function renderCard(project, service, href) {

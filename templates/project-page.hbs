@@ -116,6 +116,26 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-stat-val { color: #fff; font-size: 15px; font-weight: 700; }
 .proj-stat-val.green { color: #4caf50; }
 
+/* ── TRUST BAR ── */
+.proj-trust-bar { background: #fff; border-bottom: 1px solid #e0e8f0; padding: 20px; }
+.proj-trust-bar-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; align-items: center; }
+.proj-trust-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.proj-trust-icon { width: 40px; height: 40px; border-radius: 50%; background: #133047; color: #4caf50; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.proj-trust-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.proj-trust-text { min-width: 0; }
+.proj-trust-value { font-size: 15px; font-weight: 800; color: #133047; line-height: 1.15; white-space: nowrap; }
+.proj-trust-meta { font-size: 12px; color: #8a9db0; line-height: 1.3; margin-top: 2px; }
+@media (max-width: 1024px) {
+  .proj-trust-bar-inner { grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+@media (max-width: 480px) {
+  .proj-trust-bar { padding: 14px; }
+  .proj-trust-icon { width: 34px; height: 34px; }
+  .proj-trust-icon svg { width: 16px; height: 16px; }
+  .proj-trust-value { font-size: 13px; }
+  .proj-trust-meta { font-size: 11px; }
+}
+
 /* ── SECTIONS ── */
 .proj-section { padding: 56px 20px; }
 .proj-section-inner { max-width: 1100px; margin: 0 auto; }
@@ -467,6 +487,23 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
       <span class="proj-stat-key">Completed</span>
       <span class="proj-stat-val">{{dateLabel}}</span>
     </div>
+  </div>
+</div>
+
+<!-- ═══ TRUST BAR ═══ -->
+<div class="proj-trust-bar">
+  <div class="proj-trust-bar-inner">
+    {{#each trustSignals}}
+    <div class="proj-trust-item">
+      <span class="proj-trust-icon">
+        <svg viewBox="0 0 24 24">{{{svg}}}</svg>
+      </span>
+      <div class="proj-trust-text">
+        <div class="proj-trust-value">{{value}}</div>
+        <div class="proj-trust-meta">{{meta}}</div>
+      </div>
+    </div>
+    {{/each}}
   </div>
 </div>
 

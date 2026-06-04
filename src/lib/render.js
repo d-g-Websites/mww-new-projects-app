@@ -16,6 +16,35 @@ function getTemplate() {
 
 const SITE_ROOT = 'https://www.mywindowwashing.com';
 
+// Trust signals shown on every project page (between the Stats Bar
+// and the Narrative). Static across projects — these reflect the
+// business as a whole, not the individual job. Update the values
+// here when the rating count ticks up or the years-in-business
+// anniversary rolls over; the next publish (or any edit-republish)
+// propagates them to all pages going forward.
+const TRUST_SIGNALS = [
+  {
+    value: '4.9 ★',
+    meta:  'from 2,000+ Google reviews',
+    svg:   '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  },
+  {
+    value: 'BBB A+',
+    meta:  'Accredited Business',
+    svg:   '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  },
+  {
+    value: 'Insured & Bonded',
+    meta:  'Full liability coverage',
+    svg:   '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>',
+  },
+  {
+    value: '20+ Years',
+    meta:  'Serving Chicago since 2003',
+    svg:   '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  },
+];
+
 function initialOf(name) {
   return (name || '?').trim().charAt(0).toUpperCase();
 }
@@ -328,6 +357,7 @@ function buildView(project, opts = {}) {
     // to itself or the spoke it's already mentioning in 'Served by
     // Our X Office'.
     nearbyLinks: buildNearbyLinks(project),
+    trustSignals: TRUST_SIGNALS,
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
     gallery:   galleryFilenames(project),

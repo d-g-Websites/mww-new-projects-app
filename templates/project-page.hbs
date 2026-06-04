@@ -136,6 +136,29 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-crew-card .name { font-size: 16px; font-weight: 700; color: #133047; margin: 0; }
 .proj-crew-card .bio  { font-size: 13px; color: #595959; margin: 4px 0 0; line-height: 1.5; }
 
+/* ── NEARBY CITIES ── */
+.proj-nearby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.proj-nearby-card {
+  display: flex; flex-direction: column;
+  padding: 18px 14px;
+  background: #fff;
+  border: 1px solid #e0e8f0;
+  border-radius: 12px;
+  text-decoration: none;
+  text-align: center;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.proj-nearby-card:hover {
+  border-color: #4caf50;
+  box-shadow: 0 6px 18px rgba(76,175,80,.18);
+  transform: translateY(-2px);
+}
+.proj-nearby-service { font-size: 12px; color: #8a9db0; font-weight: 600; margin-bottom: 4px; }
+.proj-nearby-city    { font-size: 16px; color: #133047; font-weight: 700; margin-bottom: 8px; line-height: 1.2; }
+.proj-nearby-miles   { font-size: 11px; color: #4caf50; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-top: auto; }
+@media (max-width: 767px) { .proj-nearby-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 768px) and (max-width: 1024px) { .proj-nearby-grid { grid-template-columns: repeat(3, 1fr); } }
+
 /* ── FAQ ── */
 .proj-faq { display: flex; flex-direction: column; gap: 12px; max-width: 860px; margin: 0 auto; }
 .proj-faq-item { background: #fff; border: 1px solid #e0e8f0; border-radius: 12px; padding: 18px 22px; box-shadow: 0 2px 8px rgba(19,48,71,.04); }
@@ -677,6 +700,26 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
         allowfullscreen="" loading="lazy"
         referrerpolicy="no-referrer-when-downgrade"
         title="{{hub.name}} office location"></iframe>
+    </div>
+  </div>
+</div>
+{{/if}}
+
+{{#if nearbyLinks.length}}
+<!-- ═══ NEARBY CITIES ═══ -->
+<div class="proj-section" style="background:#fff;padding-top:32px;padding-bottom:40px;">
+  <div class="proj-section-inner">
+    <div class="proj-section-label"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Service Area</div>
+    <h2 class="proj-section-title">{{service.label}} in Nearby Cities</h2>
+    <p class="proj-section-sub">Our {{hub.name}} crew also serves these areas.</p>
+    <div class="proj-nearby-grid">
+      {{#each nearbyLinks}}
+      <a href="{{href}}" class="proj-nearby-card">
+        <span class="proj-nearby-service">{{../service.label}} in</span>
+        <span class="proj-nearby-city">{{name}}, IL</span>
+        <span class="proj-nearby-miles">{{milesRounded}} mi away</span>
+      </a>
+      {{/each}}
     </div>
   </div>
 </div>

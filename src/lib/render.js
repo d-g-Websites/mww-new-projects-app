@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import Handlebars from 'handlebars';
-import { getService, getHub, getCity } from './slug.js';
+import { getService, getHub, getCity, findNearestCities } from './slug.js';
 import { relatedProjects, listPublished, getUser } from './db.js';
 
 const TEMPLATE_PATH = join(process.cwd(), 'templates', 'project-page.hbs');
@@ -321,6 +321,13 @@ function buildView(project, opts = {}) {
     video: buildVideo(project, service, city, hub, homeType, metricVal, metricLab),
     faq:   Array.isArray(project.faq) ? project.faq : [],
     tech:  buildTech(project),
+    // Internal-linking block at the bottom of the page — the 5
+    // geographically-closest spoke cities, each linked to its spoke
+    // page (which always exists). Drops the project's own city + its
+    // anchored spoke from the candidate list so the page doesn't link
+    // to itself or the spoke it's already mentioning in 'Served by
+    // Our X Office'.
+    nearbyLinks: buildNearbyLinks(project),
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
     gallery:   galleryFilenames(project),
@@ -478,6 +485,20 @@ function windowScopeTags(extras = {}) {
 
 function plur(n, singular) {
   return n === 1 ? singular : `${singular}s`;
+}
+
+function buildNearbyLinks(project) {
+  if (project.address_lat == null || project.address_lng == null) return [];
+  const exclude = [project.city_slug, project.spoke_slug].filter(Boolean);
+  return findNearestCities(project.address_lat, project.address_lng, {
+    count: 5,
+    excludeSlugs: exclude,
+  }).map(c => ({
+    name: c.name,
+    slug: c.slug,
+    href: `../${c.slug}`,                       // sibling-relative from /projects/
+    milesRounded: Math.max(1, Math.round(c.distanceMiles)),
+  }));
 }
 
 // Look up the submitting tech and shape their data for the project

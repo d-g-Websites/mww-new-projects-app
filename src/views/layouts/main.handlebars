@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{title}}MWW Dashboard</title>
+
+<!-- PWA: makes the dashboard installable as an app-like icon on
+     phone home screens. iOS Safari uses the apple-touch-icon +
+     apple-mobile-web-app-* meta tags; Android Chrome + everything
+     else reads manifest.json. -->
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#133047">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MWW">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <style>
 * { box-sizing: border-box; }

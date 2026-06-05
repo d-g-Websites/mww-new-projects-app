@@ -42,6 +42,18 @@ app.set('views', join(__dirname, 'views'));
 
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
+
+// Static files (PWA manifest, icons, favicons). Long cache by default
+// since we hash filenames into the manifest version when we update.
+app.use(express.static(join(__dirname, '..', 'public'), {
+  maxAge: '7d',
+  setHeaders(res, path) {
+    if (path.endsWith('manifest.json')) {
+      // manifest changes infrequently but shouldn't be aggressively cached
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  },
+}));
 app.use(session({
   name: 'mww.sid',
   secret: process.env.SESSION_SECRET || 'change-me',

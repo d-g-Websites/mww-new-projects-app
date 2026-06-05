@@ -1,7 +1,7 @@
 {
-  "name": "MWW Dashboard",
-  "short_name": "MWW",
-  "description": "Submit completed projects for My Window Washing.",
+  "name": "MWW Projects Dashboard",
+  "short_name": "MWW Projects",
+  "description": "Submit and publish completed projects for My Window Washing.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -26,12 +26,6 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
-    },
-    {
-      "src": "/icon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "any"
     }
   ]
 }

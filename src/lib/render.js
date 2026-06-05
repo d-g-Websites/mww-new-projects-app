@@ -109,6 +109,15 @@ function buildSchema(p, service, city, hub) {
       breadcrumb:         { '@id': breadcrumbId },
       primaryImageOfPage: { '@id': afterId },
       mainEntity:         { '@id': articleId },
+      // Speakable picks the parts of the page voice assistants can
+      // read aloud when answering a query — Google Assistant, Alexa,
+      // Siri all honor this. The hero H1 + subtitle together cover
+      // service, city, property type, primary metric, and crew — a
+      // ~20-second self-contained answer.
+      speakable: {
+        '@type': 'SpeakableSpecification',
+        cssSelector: ['.proj-hero h1', '.proj-hero-sub'],
+      },
     },
     {
       '@type': 'BreadcrumbList',

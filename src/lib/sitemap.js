@@ -34,6 +34,21 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Strip a project URL from sitemap.xml entirely — used when an
+// admin deletes a published project. The whole <url>...</url> block
+// for that loc gets removed, leaving the rest of the sitemap intact.
+export function removeFromSitemap(siteRepoPath, project) {
+  const path = join(siteRepoPath, 'sitemap.xml');
+  let xml = readFileSync(path, 'utf8');
+  const loc = `https://www.mywindowwashing.com/projects/${project.slug}`;
+  const re = new RegExp(
+    `\\s*<url>\\s*<loc>${escapeRegex(loc)}</loc>[\\s\\S]*?</url>`,
+    'gi'
+  );
+  xml = xml.replace(re, '');
+  writeFileSync(path, xml, 'utf8');
+}
+
 // Refresh (or append) entries for each archive URL. Archive pages are
 // page-level aggregators, so they sit at priority 0.7 — above project
 // pages (0.6) but below spoke pages (0.8). Idempotent: existing

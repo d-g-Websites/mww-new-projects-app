@@ -88,6 +88,50 @@ export function updateSpokePage(siteRepoPath, citySlug, project, opts = {}) {
   return { skipped: false, replacedIndex };
 }
 
+// Reverse of updateSpokePage — used when an admin deletes a
+// published project. Strips the tile from .project-cards, removes
+// the footer Recent Projects entry, and refreshes the
+// 'View all N projects' link with the lower count.
+export function unpublishFromSpoke(siteRepoPath, citySlug, projectSlug, newProjectCount) {
+  const spokePath = join(siteRepoPath, `${citySlug}.html`);
+  if (!existsSync(spokePath)) {
+    return { skipped: true, reason: `no spoke page at ${spokePath}` };
+  }
+  const html = readFileSync(spokePath, 'utf8');
+  const $ = cheerio.load(html, { decodeEntities: false });
+  const projectHref = `projects/${projectSlug}`;
+
+  // Remove the project-card tile linking to this project.
+  let tilesRemoved = 0;
+  $('.project-cards .project-card').each((_, el) => {
+    const $el = $(el);
+    // Anchor may be the .project-card itself or a child
+    const href = $el.attr('href') || $el.find('a').first().attr('href');
+    if (href === projectHref) {
+      $el.remove();
+      tilesRemoved++;
+    }
+  });
+
+  // Remove footer "Recent Projects" list entry linking to this project.
+  $('.lp-footer-col h4').each((_, h) => {
+    const $h = $(h);
+    if ($h.text().trim().toLowerCase() === 'recent projects') {
+      const $ul = $h.next('ul');
+      if (!$ul.length) return;
+      $ul.find(`a[href="${projectHref}"]`).closest('li').remove();
+    }
+  });
+
+  // Refresh the 'View all' link with the new count.
+  if ($('.project-cards').length) {
+    injectViewAllLink($, citySlug, resolveCityName(citySlug), newProjectCount);
+  }
+
+  writeFileSync(spokePath, $.html(), 'utf8');
+  return { updated: true, tilesRemoved, newProjectCount };
+}
+
 // Standalone "View all" link refresher — runs without touching the
 // tile grid or the footer column. Used by the sync-spoke-view-all
 // script to backfill spoke pages that have never received a project

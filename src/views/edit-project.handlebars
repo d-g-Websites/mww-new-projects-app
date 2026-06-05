@@ -107,4 +107,11 @@
   <button type="submit" class="btn btn-block">Save changes &amp; update live site</button>
 </form>
 
+<form method="post" action="/projects/{{project.id}}/delete" style="margin-top:14px;"
+      onsubmit="return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row. cPanel still needs a deploy click to remove it from the live site. This cannot be undone — proceed?');">
+  <button type="submit" class="btn btn-block" style="background:#c62828;color:#fff;border:none;">
+    Delete project from website
+  </button>
+</form>
+
 <a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>

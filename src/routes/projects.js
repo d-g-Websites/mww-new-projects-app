@@ -15,7 +15,7 @@ import { processBeforeAfter, processExtras } from '../lib/photos.js';
 import { generateNarrative } from '../lib/narrative.js';
 import { generateFaq } from '../lib/faq.js';
 import { renderProjectHtml } from '../lib/render.js';
-import { publishProject, republishProject } from './publish.js';
+import { publishProject, republishProject, unpublishProject } from './publish.js';
 import { requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
@@ -637,18 +637,26 @@ router.post('/projects/:id/publish', async (req, res, next) => {
   }
 });
 
-// Admin's "Delete" button — drops the draft/pending project. We don't
-// allow deleting already-published rows (those would need to be
-// reverted via the static-site repo instead).
-router.post('/projects/:id/delete', (req, res, next) => {
+// Delete project — branches by status:
+//   - draft / pending   → simple DB row delete
+//   - published         → ADMIN-ONLY full unpublish: remove HTML +
+//                         photos from site repo, strip spoke-page
+//                         tile + footer link, remove sitemap entry,
+//                         regenerate archives (deleting empty ones),
+//                         commit + push.
+router.post('/projects/:id/delete', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+
     if (p.status === 'published') {
-      return res.status(409).render('error', {
-        message: 'Already-published projects can\'t be deleted from the dashboard. Remove the file from the mywindowwashing repo directly.',
-      });
+      if (req.user?.role !== 'admin') {
+        return res.status(403).render('error', { message: 'Only admins can delete published projects.' });
+      }
+      const result = await unpublishProject(p);
+      return res.render('unpublished', { project: p, result });
     }
+
     deleteProject(p.id);
     res.redirect('/');
   } catch (err) {

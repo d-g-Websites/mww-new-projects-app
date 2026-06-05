@@ -1,11 +1,15 @@
 import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { writeProjectPage } from '../lib/render.js';
-import { updateSpokePage } from '../lib/spoke-update.js';
-import { updateSitemap, updateSitemapArchives } from '../lib/sitemap.js';
+import { updateSpokePage, unpublishFromSpoke } from '../lib/spoke-update.js';
+import { updateSitemap, updateSitemapArchives, removeFromSitemap } from '../lib/sitemap.js';
 import { commitAndPush, syncSiteRepo } from '../lib/git.js';
-import { markPublished, getProject, listPublishedBySpoke } from '../lib/db.js';
+import {
+  markPublished, getProject, deleteProject,
+  listPublishedBySpoke, listPublishedByService, listPublishedAll,
+} from '../lib/db.js';
 import { writeAffectedArchives, currentArchiveUrls } from '../lib/archive.js';
+import { unlinkSync, existsSync as fsExistsSync } from 'node:fs';
 
 // Run the four side-effects in order:
 //   1. Write projects/<slug>.html
@@ -184,4 +188,110 @@ export async function republishProject(project, { replacedPhotos = {} } = {}) {
   });
 
   return { projectPath: basename(projectPath), archives: archivePaths.map(p => basename(p)), git, pushed: pushFlag };
+}
+
+// Reverse of publishProject — used when an admin deletes a
+// published project from the dashboard. Removes the project HTML,
+// its photos, the spoke-page tile + footer link, the sitemap entry,
+// and the DB row. Regenerates the master + service + spoke archive
+// pages without this project. Single commit + push so cPanel's next
+// deploy reflects the deletion.
+export async function unpublishProject(project) {
+  const siteRepo = process.env.SITE_REPO_PATH;
+  const branch   = process.env.SITE_REPO_BRANCH || 'master';
+  const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
+  if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
+
+  const removedFiles = [];
+
+  // 1. Delete the project HTML.
+  const projectPath = join(siteRepo, 'projects', `${project.slug}.html`);
+  if (fsExistsSync(projectPath)) {
+    unlinkSync(projectPath);
+    removedFiles.push(relTo(siteRepo, projectPath));
+  }
+
+  // 2. Delete photos (before, after, up to 5 extras).
+  const imgDir = join(siteRepo, 'projects', 'img');
+  const photoNames = [
+    `${project.slug}-before.webp`,
+    `${project.slug}-after.webp`,
+    `${project.slug}-extra-1.webp`,
+    `${project.slug}-extra-2.webp`,
+    `${project.slug}-extra-3.webp`,
+    `${project.slug}-extra-4.webp`,
+    `${project.slug}-extra-5.webp`,
+  ];
+  for (const name of photoNames) {
+    const p = join(imgDir, name);
+    if (fsExistsSync(p)) {
+      unlinkSync(p);
+      removedFiles.push(relTo(siteRepo, p));
+    }
+  }
+
+  // 3. Delete from DB BEFORE we regenerate archives — the archives
+  //    query listPublishedBy* and we want them to exclude this row.
+  const spokeSlug = project.spoke_slug || project.city_slug;
+  deleteProject(project.id);
+
+  // 4. Patch the spoke page: remove the tile + footer link, refresh
+  //    the 'View all N projects' count.
+  const newSpokeCount = listPublishedBySpoke(spokeSlug).length;
+  const spokeResult = unpublishFromSpoke(siteRepo, spokeSlug, project.slug, newSpokeCount);
+  const spokePath = join(siteRepo, `${spokeSlug}.html`);
+
+  // 5. Regenerate archives without this project. Each generator
+  //    returns null when there's nothing left to list — if any
+  //    archive ends up empty, delete its file so we're not left
+  //    with stale empty pages.
+  const archivePaths = writeAffectedArchives(siteRepo, project);
+
+  const emptyChecks = [
+    { file: 'index.html',             count: listPublishedAll().length },
+    { file: `${project.service}.html`, count: listPublishedByService(project.service).length },
+    { file: `${spokeSlug}.html`,       count: newSpokeCount },
+  ];
+  for (const { file, count } of emptyChecks) {
+    if (count === 0) {
+      const full = join(siteRepo, 'projects', file);
+      if (fsExistsSync(full)) {
+        unlinkSync(full);
+        removedFiles.push(relTo(siteRepo, full));
+      }
+    }
+  }
+
+  // 6. Strip the project URL from sitemap.xml and refresh archive lastmods.
+  removeFromSitemap(siteRepo, project);
+  const today = new Date().toISOString().slice(0, 10);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  const sitemapPath = join(siteRepo, 'sitemap.xml');
+
+  // 7. Stage everything for the commit. removedFiles for deletes,
+  //    spoke + sitemap + archive paths for modifications.
+  const files = [
+    ...removedFiles,                              // deletions
+    relTo(siteRepo, sitemapPath),                 // modified
+    ...archivePaths.map(p => relTo(siteRepo, p)), // possibly modified, possibly deleted
+  ];
+  if (!spokeResult.skipped) files.push(relTo(siteRepo, spokePath));
+
+  const git = await commitAndPush({
+    siteRepoPath: siteRepo,
+    branch,
+    files,
+    message: `Delete project: ${project.slug}`,
+    push: pushFlag,
+  });
+
+  return {
+    removed: removedFiles.length,
+    spoke: spokeResult,
+    archives: archivePaths.map(p => basename(p)),
+    git,
+    pushed: pushFlag,
+  };
 }

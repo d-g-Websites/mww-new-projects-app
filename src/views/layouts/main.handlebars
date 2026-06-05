@@ -22,7 +22,22 @@
 <style>
 * { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f8fa; color: #133047; }
-header { background: #133047; color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+header {
+  background: #133047;
+  color: #fff;
+  /* iOS PWA: when the dashboard runs standalone the status bar /
+     notch / Dynamic Island sits on top of the page. env(safe-area-
+     inset-top) is the device's reported height for that zone — 0 on
+     desktops + Android, ~44-59px on iPhones depending on model. Add
+     it to the base 14px so the header content always sits below. */
+  padding: calc(env(safe-area-inset-top, 0px) + 14px)
+           max(16px, env(safe-area-inset-right, 16px))
+           14px
+           max(16px, env(safe-area-inset-left, 16px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 header h1 { margin: 0; font-size: 18px; font-weight: 700; }
 header a, header form button { color: #fff; background: none; border: none; font-size: 14px; text-decoration: none; cursor: pointer; }
 main { max-width: 720px; margin: 0 auto; padding: 16px; }

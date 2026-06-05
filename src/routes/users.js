@@ -24,13 +24,12 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 },
 });
 
-router.use(requireAuth);
-
-// Everything in this router needs admin role.
-router.use((req, res, next) => {
-  // Allow techs to view their own profile? For v1 keep it admin-only.
-  return requireAdmin(req, res, next);
-});
+// Admin-only gating, scoped to /users/* so it doesn't bleed onto
+// every other request flowing through the router (which is mounted
+// at the root). Earlier this was a bare router.use(requireAdmin)
+// which made techs get a 403 on every page including the dashboard
+// home — fixed now.
+router.use('/users', requireAuth, requireAdmin);
 
 const usernameRe = /^[a-z][a-z0-9_-]{1,30}$/;
 

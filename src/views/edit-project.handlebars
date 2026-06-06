@@ -43,7 +43,7 @@
     <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Replace before/after by uploading a new file. Leave blank to keep the current photo. Gallery photos aren't editable here yet.</p>
     <div class="field">
       <label for="before">Before photo</label>
-      <input id="before" name="before" type="file" accept="image/*" capture="environment">
+      <input id="before" name="before" type="file" accept="image/*">
       <div class="photo-preview">
         <img src="https://www.mywindowwashing.com/projects/img/{{project.slug}}-before.webp" alt="Current before photo">
         <span class="existing-tag">Currently live</span>
@@ -51,7 +51,7 @@
     </div>
     <div class="field">
       <label for="after">After photo</label>
-      <input id="after" name="after" type="file" accept="image/*" capture="environment">
+      <input id="after" name="after" type="file" accept="image/*">
       <div class="photo-preview">
         <img src="https://www.mywindowwashing.com/projects/img/{{project.slug}}-after.webp" alt="Current after photo">
         <span class="existing-tag">Currently live</span>

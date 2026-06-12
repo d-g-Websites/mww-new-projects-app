@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import usersRouter from './routes/users.js';
+import videosRouter from './routes/videos.js';
 import { loadUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +71,7 @@ app.use(session({
 app.use(loadUser);
 app.use('/', authRouter);
 app.use('/', usersRouter);
+app.use('/', videosRouter);
 app.use('/', projectsRouter);
 
 // Global error handler — surfaces stack only in non-prod.
@@ -82,6 +84,12 @@ app.use((err, req, res, next) => {
 });
 
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`MWW dashboard listening on http://localhost:${port}`);
 });
+
+// Video uploads from a phone on cell signal can take a long time —
+// Node's default 5-minute requestTimeout would kill them mid-stream.
+server.requestTimeout = 1000 * 60 * 60;  // 1h ceiling per request
+server.headersTimeout = 1000 * 65;
+

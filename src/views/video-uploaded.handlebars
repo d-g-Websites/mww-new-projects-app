@@ -1,0 +1,33 @@
+<div class="alert alert-success">
+  <strong>Uploaded to YouTube.</strong> {{#if (eq privacy "public")}}The video is live on the channel.{{else}}Visibility: {{privacy}}.{{/if}}
+</div>
+
+<div class="card">
+  <h2>{{title}}</h2>
+  <p style="margin:0 0 14px;"><code style="font-size:13px;word-break:break-all;">{{url}}</code></p>
+  <a class="btn btn-block" href="{{url}}" target="_blank" rel="noopener" style="text-align:center;background:#c00;">▶ Watch on YouTube</a>
+</div>
+
+{{#if attached}}
+<div class="card">
+  <h2>Added to project</h2>
+  <p style="font-size:14px;">{{attached.service_label}} — {{attached.city_name}}, IL (<code>{{attached.slug}}</code>)</p>
+  {{#if republished}}
+  <p style="font-size:14px;">The published page was re-rendered with the video embed and pushed to the static-site repo.</p>
+  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:0;">
+    <strong>cPanel needs a deploy</strong> for the embed to appear on the live site: Git Version Control → Update from Remote → Deploy HEAD Commit.
+  </div>
+  {{else}}
+  <p style="font-size:14px;">The video URL is saved on the project — it'll be embedded on the page when the project is published.</p>
+  {{/if}}
+</div>
+{{else}}
+<div class="card">
+  <p class="muted" style="margin:0;">Not linked to a project. Copy the URL above and paste it into a project's "Video URL" field whenever you need it.</p>
+</div>
+{{/if}}
+
+<div style="display:flex;gap:10px;margin-top:14px;">
+  <a class="btn btn-outline" href="/videos" style="flex:1;text-align:center;">Upload another</a>
+  <a class="btn btn-outline" href="/" style="flex:1;text-align:center;">Dashboard</a>
+</div>

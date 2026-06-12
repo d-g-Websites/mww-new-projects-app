@@ -1,0 +1,148 @@
+<h2 style="margin:0 0 4px;">Upload a video to YouTube</h2>
+<p class="muted" style="margin:0 0 16px;">Goes straight to the My Window Washing channel. AI writes the title &amp; description from the project's facts — review, tweak, upload.</p>
+
+{{#if error}}<div class="alert">{{error}}</div>{{/if}}
+{{#if notice}}<div class="alert alert-success">{{notice}}</div>{{/if}}
+
+{{#unless configured}}
+<div class="card">
+  <h2>⚙️ Setup needed</h2>
+  <p style="font-size:14px;line-height:1.6;">YouTube API credentials aren't configured yet. {{#if isAdmin}}Add <code>YOUTUBE_CLIENT_ID</code> and <code>YOUTUBE_CLIENT_SECRET</code> to the app's <code>.env</code> (Google Cloud Console → YouTube Data API v3 → OAuth client), restart the app, then come back here.{{else}}Ask the admin to set it up.{{/if}}</p>
+</div>
+{{else}}
+  {{#unless connected}}
+  <div class="card">
+    <h2>🔗 Connect the YouTube channel</h2>
+    <p style="font-size:14px;line-height:1.6;">One-time step: log into the company's YouTube account and allow uploads. After that, everyone on the team can upload without logging in.</p>
+    {{#if isAdmin}}
+    <a class="btn btn-block" href="/youtube/connect" style="text-align:center;background:#c00;">▶ Connect YouTube channel</a>
+    {{else}}
+    <p class="muted">Only an admin can connect the channel. Ask the office to do this once.</p>
+    {{/if}}
+  </div>
+  {{/unless}}
+{{/if}}
+
+{{#if connected}}
+<div class="card" style="border-color:#a5d6a7;background:#f1f8f2;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:14px;"><strong style="color:#2e7d32;">● Connected</strong> — uploads go to the company YouTube channel.</span>
+    {{#if isAdmin}}
+    <form method="post" action="/youtube/disconnect" style="margin:0;" onsubmit="return confirm('Disconnect YouTube? Uploads will stop working until an admin reconnects.');">
+      <button type="submit" class="btn btn-outline" style="padding:6px 12px;font-size:12px;">Disconnect</button>
+    </form>
+    {{/if}}
+  </div>
+</div>
+
+<form method="post" action="/videos/upload" enctype="multipart/form-data" id="video-form">
+
+  <div class="card">
+    <h2>1. Video file</h2>
+    <div class="field">
+      <label for="video">Video (MP4 / MOV — phone videos work as-is)</label>
+      <input id="video" name="video" type="file" accept="video/*" required>
+      <small id="video-size" style="display:none;"></small>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Which project is this for? <small style="font-weight:400;color:#8a9db0;">(optional)</small></h2>
+    <div class="field">
+      <label for="project_id">Project</label>
+      <select id="project_id" name="project_id">
+        <option value="">— No project (standalone video) —</option>
+        {{#each projects}}
+        <option value="{{id}}">{{label}}{{#if hasVideo}} — already has a video{{/if}}</option>
+        {{/each}}
+      </select>
+      <small>Pick one and the YouTube link is added to that project automatically. Published projects get their live page updated too. The AI also uses the project's narrative to write the title &amp; description.</small>
+    </div>
+    <div class="field" id="manual-context-field">
+      <label for="manual_context">Job notes for the AI <small style="font-weight:400;color:#8a9db0;">(only used when no project is picked)</small></label>
+      <textarea id="manual_context" name="manual_context" rows="3" placeholder="e.g. gutter cleaning in Naperville, 2-story colonial, 180 ft of gutters, fall cleanout"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Title &amp; description</h2>
+    <button type="button" class="btn btn-outline btn-block" id="gen-meta" style="margin-bottom:14px;">✨ Generate with AI</button>
+    <div id="gen-status" class="muted" style="display:none;margin:-6px 0 12px;"></div>
+    <div class="field">
+      <label for="title">Title <small style="color:#c62828;">(required, max 100 chars)</small></label>
+      <input id="title" name="title" maxlength="100" required placeholder="Window Cleaning in Naperville IL — … | My Window Washing">
+    </div>
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" rows="8"></textarea>
+    </div>
+    <div class="field">
+      <label for="tags">Tags <small style="font-weight:400;color:#8a9db0;">(comma-separated)</small></label>
+      <input id="tags" name="tags" placeholder="window cleaning, window cleaning naperville, my window washing">
+    </div>
+    <div class="field">
+      <label for="privacy">Visibility on YouTube</label>
+      <select id="privacy" name="privacy">
+        <option value="public" {{#if (eq defaultPrivacy "public")}}selected{{/if}}>Public — shows on the channel, searchable</option>
+        <option value="unlisted" {{#if (eq defaultPrivacy "unlisted")}}selected{{/if}}>Unlisted — only people with the link (embeds still work)</option>
+        <option value="private" {{#if (eq defaultPrivacy "private")}}selected{{/if}}>Private — only the channel owner</option>
+      </select>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-block" id="upload-btn" style="background:#c00;">▶ Upload to YouTube</button>
+  <p class="muted" id="upload-note" style="display:none;text-align:center;margin-top:10px;">Uploading… big videos on cell signal can take several minutes. Keep this page open.</p>
+</form>
+
+<script>
+(function () {
+  var genBtn = document.getElementById('gen-meta');
+  var status = document.getElementById('gen-status');
+  var form = document.getElementById('video-form');
+  var uploadBtn = document.getElementById('upload-btn');
+  var videoInput = document.getElementById('video');
+  var sizeNote = document.getElementById('video-size');
+
+  videoInput.addEventListener('change', function () {
+    var f = videoInput.files && videoInput.files[0];
+    if (!f) { sizeNote.style.display = 'none'; return; }
+    sizeNote.textContent = f.name + ' — ' + (f.size / (1024 * 1024)).toFixed(1) + ' MB';
+    sizeNote.style.display = 'block';
+  });
+
+  genBtn.addEventListener('click', function () {
+    genBtn.disabled = true;
+    status.style.display = 'block';
+    status.textContent = 'Writing title & description…';
+    fetch('/videos/generate-meta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: document.getElementById('project_id').value || null,
+        manual_context: document.getElementById('manual_context').value || null
+      })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (meta) {
+        if (meta.error) throw new Error(meta.error);
+        document.getElementById('title').value = (meta.title || '').slice(0, 100);
+        document.getElementById('description').value = meta.description || '';
+        document.getElementById('tags').value = (meta.tags || []).join(', ');
+        status.textContent = '✓ Done — review and edit anything you like, then upload.';
+      })
+      .catch(function (err) {
+        status.textContent = '⚠️ Generation failed: ' + err.message + ' — you can still type the title yourself.';
+      })
+      .finally(function () { genBtn.disabled = false; });
+  });
+
+  form.addEventListener('submit', function () {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '⏳ Uploading to YouTube…';
+    document.getElementById('upload-note').style.display = 'block';
+  });
+})();
+</script>
+{{/if}}
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>

@@ -48,6 +48,12 @@ db.exec(`
     updated_at    TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_projects_status_pub
     ON projects(status, published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_projects_city
@@ -307,4 +313,25 @@ export function deleteUser(id) {
 
 export function countUsers() {
   return db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+}
+
+// ── Settings (key/value) ─────────────────────────────────────────────
+// Small server-side config that shouldn't live in .env because the app
+// writes it at runtime — e.g. the YouTube OAuth refresh token.
+
+export function getSetting(key) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+export function setSetting(key, value) {
+  db.prepare(`
+    INSERT INTO settings (key, value, updated_at)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+  `).run(key, value);
+}
+
+export function deleteSetting(key) {
+  db.prepare('DELETE FROM settings WHERE key = ?').run(key);
 }

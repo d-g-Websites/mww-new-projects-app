@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, getHub, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
-import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject } from '../lib/db.js';
+import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject, listUsers } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
 
 // Placeholder text shown when Claude narrative generation fails, so
@@ -126,6 +126,18 @@ const CHALLENGE_CHOICES = {
 };
 
 // ── Step 2: fill in the actual details for the chosen service. ──
+// When an admin fills the form, they're entering the job on behalf
+// of a tech — the published page and the dashboard's "submitted by"
+// line should credit the tech who did the work, not the office. We
+// surface a "Post as" picker for admins (required) listing every
+// other user; techs always post as themselves and never see it.
+function postAsContext(user) {
+  if (!user) return { showPostAs: false, techChoices: [] };
+  if (user.role !== 'admin') return { showPostAs: false, techChoices: [] };
+  const techChoices = listUsers().filter(u => u.id !== user.id);
+  return { showPostAs: true, techChoices };
+}
+
 router.get('/new/details', (req, res) => {
   const service = getService(req.query.service);
   if (!service) return res.redirect('/new');
@@ -136,6 +148,7 @@ router.get('/new/details', (req, res) => {
     bulletPlaceholder: BULLET_PLACEHOLDER[service.value] || '',
     today: new Date().toISOString().slice(0, 10),
     googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    ...postAsContext(req.user),
   });
 });
 
@@ -244,6 +257,7 @@ router.post('/new',
         today: new Date().toISOString().slice(0, 10),
         formValues: b,
         googleMapsKey: process.env.GOOGLE_MAPS_API_KEY || '',
+        ...postAsContext(req.user),
         ...overrides,
       });
     };
@@ -252,6 +266,20 @@ router.post('/new',
       const service = getService(b.service);
       if (!service) {
         return res.redirect('/new');
+      }
+
+      // Admins must always pick a tech to post on behalf of — they
+      // never post under their own name. Techs post as themselves.
+      let submittedBy = req.user.id;
+      if (req.user.role === 'admin') {
+        const pickedId = Number(b.post_as) || null;
+        const valid = pickedId && listUsers().some(u => u.id === pickedId && u.id !== req.user.id);
+        if (!valid) {
+          return reRenderForm({
+            errorBanner: 'Pick a team member to post as in the "Submitting on behalf of" section — admins can\'t submit projects under their own name.',
+          });
+        }
+        submittedBy = pickedId;
       }
 
       const lat = b.lat ? parseFloat(b.lat) : null;
@@ -364,7 +392,7 @@ router.post('/new',
         address_lat: lat,
         address_lng: lng,
         video_url: b.video_url || null,
-        submitted_by: req.user?.id || null,
+        submitted_by: submittedBy,
       });
 
       const nearbyTowns = findNearestCities(lat, lng, {

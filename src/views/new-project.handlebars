@@ -8,6 +8,22 @@
 <form method="post" action="/new" enctype="multipart/form-data" id="project-form">
   <input type="hidden" name="service" value="{{service.value}}">
 
+  {{#if showPostAs}}
+  <div class="card" style="border-color:#ffb74d;background:#fff8e1;">
+    <h2 style="color:#7a4400;">Submitting on behalf of <small style="color:#c62828;">(required)</small></h2>
+    <p class="muted" style="margin:-8px 0 10px;font-size:13px;">As an admin you don't post under your own name. Pick the tech who did this job — they'll be credited on the project page and in the dashboard list.</p>
+    <div class="field" style="margin-bottom:0;">
+      <label for="post_as">Tech</label>
+      <select id="post_as" name="post_as" required>
+        <option value="">— Choose a team member —</option>
+        {{#each techChoices}}
+        <option value="{{id}}" {{#if (eq (concat ../formValues.post_as "") (concat id ""))}}selected{{/if}}>{{display_name}}{{#if (eq role "admin")}} (admin){{/if}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+  {{/if}}
+
   <div class="card">
     <h2>1. Address</h2>
     <div class="field">

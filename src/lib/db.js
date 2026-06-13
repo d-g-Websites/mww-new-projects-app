@@ -177,18 +177,22 @@ export function deleteProject(id) {
 
 export function listPending({ limit = 50 } = {}) {
   return db.prepare(`
-    SELECT * FROM projects
-     WHERE status = 'pending'
-     ORDER BY created_at DESC
+    SELECT projects.*, users.display_name AS submitted_by_name
+      FROM projects
+      LEFT JOIN users ON users.id = projects.submitted_by
+     WHERE projects.status = 'pending'
+     ORDER BY projects.created_at DESC
      LIMIT ?
   `).all(limit).map(parseExtras);
 }
 
 export function listDrafts({ limit = 50 } = {}) {
   return db.prepare(`
-    SELECT * FROM projects
-     WHERE status = 'draft'
-     ORDER BY created_at DESC
+    SELECT projects.*, users.display_name AS submitted_by_name
+      FROM projects
+      LEFT JOIN users ON users.id = projects.submitted_by
+     WHERE projects.status = 'draft'
+     ORDER BY projects.created_at DESC
      LIMIT ?
   `).all(limit).map(parseExtras);
 }
@@ -196,16 +200,20 @@ export function listDrafts({ limit = 50 } = {}) {
 export function listPublished({ limit = 20, excludeId = null } = {}) {
   if (excludeId) {
     return db.prepare(`
-      SELECT * FROM projects
-       WHERE status = 'published' AND id != ?
-       ORDER BY published_at DESC
+      SELECT projects.*, users.display_name AS submitted_by_name
+        FROM projects
+        LEFT JOIN users ON users.id = projects.submitted_by
+       WHERE projects.status = 'published' AND projects.id != ?
+       ORDER BY projects.published_at DESC
        LIMIT ?
     `).all(excludeId, limit).map(parseExtras);
   }
   return db.prepare(`
-    SELECT * FROM projects
-     WHERE status = 'published'
-     ORDER BY published_at DESC
+    SELECT projects.*, users.display_name AS submitted_by_name
+      FROM projects
+      LEFT JOIN users ON users.id = projects.submitted_by
+     WHERE projects.status = 'published'
+     ORDER BY projects.published_at DESC
      LIMIT ?
   `).all(limit).map(parseExtras);
 }

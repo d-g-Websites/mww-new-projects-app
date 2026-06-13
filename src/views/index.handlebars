@@ -42,7 +42,7 @@
         <div>
           <strong>{{service_label}} — {{city_name}}, IL</strong>
           <div class="muted" style="font-size:13px;">Hub: {{hub}} · Slug: <code>{{slug}}</code></div>
-          <div class="muted" style="font-size:12px;">Submitted {{created_at}}</div>
+          <div class="muted" style="font-size:12px;">Submitted {{created_at}}{{#if submitted_by_name}} by {{submitted_by_name}}{{/if}}</div>
         </div>
         <div class="pending-actions">
           <a class="btn btn-outline" href="/projects/{{id}}/preview">Preview / Edit</a>
@@ -74,6 +74,7 @@
         <div class="muted" style="font-size:13px;">
           <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank">/{{slug}}</a> · {{published_at}}
         </div>
+        {{#if submitted_by_name}}<div class="muted" style="font-size:12px;">Submitted by {{submitted_by_name}}</div>{{/if}}
       </div>
       {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
       <div style="display:flex;gap:6px;flex-shrink:0;">

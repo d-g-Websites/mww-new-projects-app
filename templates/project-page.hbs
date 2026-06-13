@@ -283,7 +283,8 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .proj-related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 32px; }
 .proj-related-card { background: #fff; border: 1px solid #e0e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(19,48,71,.07); display: flex; flex-direction: column; text-decoration: none; transition: box-shadow .2s, transform .15s; }
 .proj-related-card:hover { box-shadow: 0 8px 24px rgba(19,48,71,.13); transform: translateY(-3px); }
-.proj-related-img { height: 160px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); display: flex; align-items: center; justify-content: center; }
+.proj-related-img { height: 160px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.proj-related-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .proj-related-img svg { width: 40px; height: 40px; stroke: #4caf50; fill: none; stroke-width: 1.5; opacity: .5; }
 .proj-related-body { padding: 18px; flex: 1; display: flex; flex-direction: column; }
 .proj-related-tag { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
@@ -710,7 +711,13 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
     <div class="proj-related-grid">
       {{#each related}}
       <a href="{{href}}" class="proj-related-card">
-        <div class="proj-related-img"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <div class="proj-related-img">
+          {{#if image}}
+          <img src="{{image}}" alt="{{title}}" loading="lazy">
+          {{else}}
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          {{/if}}
+        </div>
         <div class="proj-related-body">
           <span class="proj-related-tag">{{tag}}</span>
           <div class="proj-related-title">{{title}}</div>

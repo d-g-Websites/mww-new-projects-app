@@ -710,6 +710,7 @@ function buildRelated(project) {
       tag:   svc?.spokeTag || r.service,
       title: `${svc?.label || r.service} — ${city?.name || r.city_name}, IL`,
       meta:  monthYear(r.review_date) || 'Recent project',
+      image: `${SITE_ROOT}/projects/img/${r.slug}-after.webp`,
     };
   });
   while (out.length < 3) {

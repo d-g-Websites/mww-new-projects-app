@@ -77,7 +77,8 @@
         {{#if submitted_by_name}}<div class="muted" style="font-size:12px;">Submitted by {{submitted_by_name}}</div>{{/if}}
       </div>
       {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
-      <div style="display:flex;gap:6px;flex-shrink:0;">
+      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+        <a class="btn btn-outline" href="/projects/{{id}}/social" style="padding:8px 14px;font-size:13px;">📣 Social</a>
         <a class="btn btn-outline" href="/projects/{{id}}/edit" style="padding:8px 14px;font-size:13px;">Edit</a>
         <form method="post" action="/projects/{{id}}/delete" style="margin:0;"
               onsubmit="return confirm('Delete this published project? This removes the live page, photos, spoke-page tile, sitemap entry, and DB row. cPanel still needs a deploy to remove it from the live site. Cannot be undone — proceed?');">

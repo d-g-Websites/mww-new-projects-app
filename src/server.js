@@ -9,6 +9,7 @@ import authRouter from './routes/auth.js';
 import projectsRouter from './routes/projects.js';
 import usersRouter from './routes/users.js';
 import videosRouter from './routes/videos.js';
+import socialRouter from './routes/social.js';
 import { loadUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,6 +37,8 @@ app.engine('handlebars', engine({
       if (Array.isArray(haystack)) return haystack.includes(needle);
       return haystack === needle;
     },
+    // Inline JSON for client-side script tags (auto-escapes quotes).
+    json: (value) => JSON.stringify(value),
   },
 }));
 app.set('view engine', 'handlebars');
@@ -72,6 +75,7 @@ app.use(loadUser);
 app.use('/', authRouter);
 app.use('/', usersRouter);
 app.use('/', videosRouter);
+app.use('/', socialRouter);
 app.use('/', projectsRouter);
 
 // Global error handler — surfaces stack only in non-prod.

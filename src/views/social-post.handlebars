@@ -1,0 +1,176 @@
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+  <h2 style="margin:0;">📣 Create a social post</h2>
+  <a class="btn btn-outline" href="{{pageUrl}}" target="_blank" style="padding:8px 14px;font-size:13px;">View live →</a>
+</div>
+<p class="muted" style="margin:0 0 16px;">{{project.service_label}} — {{project.city_name}}, IL · <code>/{{project.slug}}</code></p>
+
+<div class="card" id="loading-card">
+  <p style="margin:0;text-align:center;font-size:15px;">✨ Writing captions for Facebook, Instagram, and LinkedIn…</p>
+</div>
+
+<div id="error-card" style="display:none;">
+  <div class="alert" id="error-msg"></div>
+  <button type="button" class="btn btn-outline btn-block" id="retry-btn">Try again</button>
+</div>
+
+<div id="content" style="display:none;">
+
+  <div class="card">
+    <h2>1. Pick the photo</h2>
+    <p class="muted" style="margin:-8px 0 12px;font-size:13px;">Click the one you want to share. Each platform card has a Download button that opens this photo full-size so you can save it.</p>
+    <div id="photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+      {{#each photos}}
+      <label class="photo-pick" data-url="{{url}}">
+        <input type="radio" name="photo" value="{{url}}" {{#if @first}}checked{{/if}}>
+        <img src="{{url}}" alt="{{label}}" loading="lazy">
+        <span>{{label}}</span>
+      </label>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Hashtags</h2>
+    <p class="muted" style="margin:-8px 0 8px;font-size:13px;">Used for Facebook + Instagram (LinkedIn skips them). Edit freely.</p>
+    <textarea id="hashtags" rows="3" style="font-family:inherit;font-size:14px;"></textarea>
+  </div>
+
+  <div class="card platform-card" data-platform="facebook">
+    <h2>📘 Facebook</h2>
+    <textarea class="caption" rows="5" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="fb-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <div class="action-row">
+      <button type="button" class="btn copy-btn" data-platform="facebook">📋 Copy caption + hashtags</button>
+      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <a class="btn btn-outline" href="https://www.facebook.com/" target="_blank">↗ Open Facebook</a>
+    </div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0;">On Facebook → your Page → <strong>Create Post</strong> → paste, attach the downloaded photo.</p>
+  </div>
+
+  <div class="card platform-card" data-platform="instagram">
+    <h2>📸 Instagram</h2>
+    <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="ig-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <div class="action-row">
+      <button type="button" class="btn copy-btn" data-platform="instagram">📋 Copy caption + hashtags</button>
+      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <a class="btn btn-outline" href="https://www.instagram.com/" target="_blank">↗ Open Instagram</a>
+    </div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0;">Instagram posting is mobile-only. Easiest: open the dashboard on your phone, tap Download to save the photo, then post from the Instagram app and paste the caption.</p>
+  </div>
+
+  <div class="card platform-card" data-platform="linkedin">
+    <h2>💼 LinkedIn</h2>
+    <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="li-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <div class="action-row">
+      <button type="button" class="btn copy-btn" data-platform="linkedin">📋 Copy caption</button>
+      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <a class="btn btn-outline" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank">↗ Open LinkedIn composer</a>
+    </div>
+  </div>
+
+  <button type="button" class="btn btn-outline btn-block" id="regen-btn" style="margin-top:14px;">⟳ Regenerate all captions</button>
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>
+
+<style>
+.photo-pick { position:relative; cursor:pointer; display:block; border:3px solid transparent; border-radius:8px; overflow:hidden; }
+.photo-pick input { position:absolute; opacity:0; }
+.photo-pick img { display:block; width:100%; aspect-ratio:3/2; object-fit:cover; background:#f5f8fa; }
+.photo-pick span { display:block; padding:6px 8px; font-size:12px; font-weight:600; background:#fff; }
+.photo-pick:has(input:checked) { border-color:#4caf50; }
+.photo-pick:has(input:checked) span { background:#e8f5e9; color:#2e7d32; }
+.action-row { display:flex; gap:8px; flex-wrap:wrap; }
+.action-row .btn { padding:10px 14px; font-size:13px; flex:1; min-width:140px; text-align:center; }
+.copy-btn.is-copied { background:#2e7d32; }
+</style>
+
+<script>
+(function () {
+  var projectId = {{project.id}};
+  var pageUrl   = {{{json pageUrl}}};
+  var loadCard  = document.getElementById('loading-card');
+  var content   = document.getElementById('content');
+  var errCard   = document.getElementById('error-card');
+  var errMsg    = document.getElementById('error-msg');
+  var hashEl    = document.getElementById('hashtags');
+  var counters  = { facebook: 'fb-count', instagram: 'ig-count', linkedin: 'li-count' };
+  var limits    = { facebook: 63206, instagram: 2200, linkedin: 3000 };
+
+  function el(platform) {
+    return document.querySelector('.platform-card[data-platform="' + platform + '"] .caption');
+  }
+  function currentPhoto() {
+    var picked = document.querySelector('input[name="photo"]:checked');
+    return picked ? picked.value : '';
+  }
+  function refreshDownloadLinks() {
+    var url = currentPhoto();
+    document.querySelectorAll('.download-btn').forEach(function (a) {
+      a.href = url;
+      a.setAttribute('download', '');
+    });
+  }
+  function refreshCounter(platform) {
+    var c = document.getElementById(counters[platform]);
+    var n = el(platform).value.length + (platform === 'linkedin' ? 0 : hashEl.value.length + 2);
+    c.textContent = n + ' / ' + limits[platform] + ' characters';
+    c.style.color = n > limits[platform] ? '#c62828' : '';
+  }
+  function refreshAllCounters() { ['facebook','instagram','linkedin'].forEach(refreshCounter); }
+
+  function load() {
+    loadCard.style.display = 'block';
+    content.style.display = 'none';
+    errCard.style.display = 'none';
+    fetch('/projects/' + projectId + '/social/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) throw new Error(data.error);
+        el('facebook').value  = data.facebook;
+        el('instagram').value = data.instagram;
+        el('linkedin').value  = data.linkedin;
+        hashEl.value = (data.hashtags || []).map(function (t) { return '#' + t; }).join(' ');
+        loadCard.style.display = 'none';
+        content.style.display = 'block';
+        refreshDownloadLinks();
+        refreshAllCounters();
+      })
+      .catch(function (err) {
+        loadCard.style.display = 'none';
+        errCard.style.display = 'block';
+        errMsg.textContent = 'Couldn’t generate captions: ' + err.message;
+      });
+  }
+
+  document.getElementById('retry-btn').addEventListener('click', load);
+  document.getElementById('regen-btn').addEventListener('click', load);
+
+  document.getElementById('photo-grid').addEventListener('change', refreshDownloadLinks);
+  ['facebook','instagram','linkedin'].forEach(function (p) {
+    el(p).addEventListener('input', function () { refreshCounter(p); });
+  });
+  hashEl.addEventListener('input', refreshAllCounters);
+
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var p = btn.dataset.platform;
+      var body = el(p).value;
+      var combined = (p === 'linkedin') ? body : (body + '\n\n' + hashEl.value);
+      navigator.clipboard.writeText(combined).then(function () {
+        var original = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('is-copied');
+        setTimeout(function () {
+          btn.textContent = original;
+          btn.classList.remove('is-copied');
+        }, 1800);
+      }, function () { alert('Couldn’t copy to clipboard. Select the text manually.'); });
+    });
+  });
+
+  load();
+})();
+</script>

@@ -271,6 +271,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 
 /* ── INTERNAL LINK BLOCK ── */
 .proj-link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.proj-narrative-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
 .proj-link-card { display: flex; align-items: center; gap: 16px; background: #f5f8fa; border: 1px solid #e0e8f0; border-radius: 14px; padding: 24px; text-decoration: none; transition: border-color .2s, box-shadow .2s, transform .15s; }
 .proj-link-card:hover { border-color: rgba(76,175,80,.5); box-shadow: 0 6px 20px rgba(19,48,71,.1); transform: translateY(-2px); }
 .proj-link-icon { width: 48px; height: 48px; border-radius: 12px; background: #133047; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -340,6 +341,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   .before-after-grid { grid-template-columns: 1fr; }
   .proj-link-grid { grid-template-columns: 1fr; }
   .proj-related-grid { grid-template-columns: 1fr; }
+  .proj-narrative-grid { grid-template-columns: 1fr; gap: 32px; }
   .btn-cta-phone { display: none; }
 }
 @media (min-width: 768px) and (max-width: 1024px) {
@@ -510,7 +512,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 
 <!-- ═══ PROJECT NARRATIVE ═══ -->
 <div class="proj-section" style="background:#f5f8fa;">
-  <div class="proj-section-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;">
+  <div class="proj-section-inner proj-narrative-grid">
     <div>
       <div class="proj-section-label"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> About This Job</div>
       <h2 class="proj-section-title" style="margin-bottom:12px;">What We Did</h2>

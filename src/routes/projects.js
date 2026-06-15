@@ -186,6 +186,7 @@ function collectExtras(serviceValue, b) {
       skylights:     b.skylights      ? intOrNull(b.skylights_count)      : null,
       windowWells:   b.window_wells   ? intOrNull(b.window_wells_count)   : null,
       tracksFrames:  !!b.tracks_frames,
+      otherExtra:    b.extras_other ? (b.extras_other_detail || '').trim() || null : null,
       challenges,
     };
   }

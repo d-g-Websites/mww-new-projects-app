@@ -123,6 +123,7 @@ function formatExtras(extras) {
   if (extras.skylights)    lines.push(`- Skylights cleaned: ${extras.skylights}`);
   if (extras.windowWells)  lines.push(`- Window wells cleaned: ${extras.windowWells}`);
   if (extras.tracksFrames) lines.push(`- Tracks and frames wiped down`);
+  if (extras.otherExtra)   lines.push(`- Other work the tech specified: ${extras.otherExtra}`);
 
   // Gutter-cleaning fields
   if (extras.sqFootage && !extras.surfaces) {

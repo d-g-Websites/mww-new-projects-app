@@ -519,6 +519,9 @@ function windowScopeTags(extras = {}) {
   if (extras.skylights)    tags.push(`${extras.skylights} ${plur(extras.skylights, 'Skylight')} Cleaned`);
   if (extras.windowWells)  tags.push(`${extras.windowWells} ${plur(extras.windowWells, 'Window Well')} Cleaned`);
   if (extras.tracksFrames) tags.push('Tracks & Frames Cleaned');
+  // Free-text "Other" extra the tech described — surfaced verbatim
+  // as a scope tag so the work shows up on the published page.
+  if (extras.otherExtra)   tags.push(extras.otherExtra);
   return tags;
 }
 

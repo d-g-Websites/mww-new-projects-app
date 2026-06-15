@@ -639,10 +639,14 @@ router.post('/projects/:id/save', async (req, res, next) => {
     }
     markPending(p.id);
     // Fire-and-forget the Telegram ping so a flaky Telegram doesn't
-    // block the tech from finishing the submission.
-    notifyNewProject({ ...p, status: 'pending' }).catch(err =>
-      console.error('[telegram] notify failed:', err)
-    );
+    // block the tech from finishing the submission. Skip the ping
+    // when an admin is saving on behalf of a tech — admins are the
+    // ones who'd be notified, so it'd just be pinging themselves.
+    if (req.user.role !== 'admin') {
+      notifyNewProject({ ...p, status: 'pending' }).catch(err =>
+        console.error('[telegram] notify failed:', err)
+      );
+    }
     res.render('saved', { project: p });
   } catch (err) {
     next(err);

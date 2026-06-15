@@ -209,6 +209,7 @@ function collectExtras(serviceValue, b) {
       drivewayMaterials: b.surface_driveway ? arr(b.driveway_materials) : [],
       walkwaysMaterials: b.surface_walkways ? arr(b.walkways_materials) : [],
       sqFootage:         intOrNull(b.metric_value),
+      otherExtra:        b.extras_other ? (b.extras_other_detail || '').trim() || null : null,
       challenges,
     };
   }
@@ -224,6 +225,7 @@ function collectExtras(serviceValue, b) {
       extraWideGutters:   !!b.extra_wide_gutters,
       cloggedElbows:      !!b.clogged_elbows,
       undergroundClogs:   !!b.underground_clogs,
+      otherExtra:         b.extras_other ? (b.extras_other_detail || '').trim() || null : null,
       challenges,
       // Extra detail captured alongside specific challenge checkboxes.
       bagsCount:          intOrNull(b.bags_count),

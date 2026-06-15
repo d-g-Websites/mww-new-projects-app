@@ -66,6 +66,15 @@
         <input type="checkbox" name="underground_clogs" value="yes" {{#if formValues.underground_clogs}}checked{{/if}}>
         <span>Underground clogs</span>
       </label>
+
+      <label class="check-row has-text {{#if formValues.extras_other}}is-checked{{/if}}">
+        <input type="checkbox" name="extras_other" value="yes" {{#if formValues.extras_other}}checked{{/if}}>
+        <span>Other</span>
+        <span class="text-input">
+          <input type="text" name="extras_other_detail" placeholder="Describe what else was done"
+                 value="{{formValues.extras_other_detail}}">
+        </span>
+      </label>
     </div>
   </div>
 
@@ -85,15 +94,12 @@
   // Same toggle behavior as the window-cleaning partial. Extends the
   // pattern to .has-subs (parent checkbox reveals a nested grid of
   // child checkboxes) on top of .has-count.
-  document.querySelectorAll('.check-row.has-count, .check-row.has-subs').forEach(function (row) {
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs, .check-row.has-text').forEach(function (row) {
     var box = row.querySelector('input[type="checkbox"]');
     function sync() {
       row.classList.toggle('is-checked', box.checked);
-      var countInput = row.querySelector('.count-input input');
-      if (countInput) {
-        countInput.required = box.checked;
-        if (!box.checked) countInput.value = '';
-      }
+      var inner = row.querySelector('.count-input input, .text-input input');
+      if (inner && !box.checked) inner.value = '';
     }
     box.addEventListener('change', sync);
     sync();

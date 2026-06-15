@@ -469,6 +469,7 @@ function powerScopeTags(extras = {}) {
   }
   if (s.playset)          tags.push('Playset Wash');
   if (s.outdoorFurniture) tags.push('Outdoor Furniture Wash');
+  if (extras.otherExtra)  tags.push(extras.otherExtra);
   return tags;
 }
 
@@ -494,6 +495,7 @@ function gutterScopeTags(extras = {}) {
   if (extras.extraWideGutters) tags.push('Extra-Wide Gutter Cleaning');
   if (extras.cloggedElbows)    tags.push('Clogged Elbow Clearing');
   if (extras.undergroundClogs) tags.push('Underground Clog Clearing');
+  if (extras.otherExtra)       tags.push(extras.otherExtra);
   return tags;
 }
 

@@ -89,6 +89,15 @@
         <input type="checkbox" name="surface_outdoor_furniture" value="yes" {{#if formValues.surface_outdoor_furniture}}checked{{/if}}>
         <span>Outdoor furniture</span>
       </label>
+
+      <label class="check-row has-text {{#if formValues.extras_other}}is-checked{{/if}}">
+        <input type="checkbox" name="extras_other" value="yes" {{#if formValues.extras_other}}checked{{/if}}>
+        <span>Other</span>
+        <span class="text-input">
+          <input type="text" name="extras_other_detail" placeholder="Describe what else was washed"
+                 value="{{formValues.extras_other_detail}}">
+        </span>
+      </label>
     </div>
   </div>
 
@@ -114,15 +123,12 @@
 <script>
   // Toggle .is-checked on parent rows for .has-count / .has-subs /
   // .has-text the same way the other partials do.
-  document.querySelectorAll('.check-row.has-count, .check-row.has-subs').forEach(function (row) {
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs, .check-row.has-text').forEach(function (row) {
     var box = row.querySelector('input[type="checkbox"]');
     function sync() {
       row.classList.toggle('is-checked', box.checked);
-      var countInput = row.querySelector('.count-input input');
-      if (countInput) {
-        countInput.required = box.checked;
-        if (!box.checked) countInput.value = '';
-      }
+      var inner = row.querySelector('.count-input input, .text-input input');
+      if (inner && !box.checked) inner.value = '';
     }
     box.addEventListener('change', sync);
     sync();

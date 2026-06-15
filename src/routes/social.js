@@ -17,13 +17,16 @@ const router = Router();
 // static-site repo on the public domain.
 function photosFor(project) {
   const base = `https://www.mywindowwashing.com/projects/img/${project.slug}`;
+  // Before + After are pre-selected since the canonical social post
+  // for a cleaning company is a before/after pair. Extras start
+  // unchecked — admin can add them by tapping.
   const list = [
-    { label: 'Before', url: `${base}-before.webp` },
-    { label: 'After',  url: `${base}-after.webp` },
+    { label: 'Before', url: `${base}-before.webp`, defaultPick: true },
+    { label: 'After',  url: `${base}-after.webp`,  defaultPick: true },
   ];
   const extras = Array.isArray(project.extra_photos) ? project.extra_photos.length : 0;
   for (let i = 1; i <= extras; i++) {
-    list.push({ label: `Photo ${i}`, url: `${base}-extra-${i}.webp` });
+    list.push({ label: `Photo ${i}`, url: `${base}-extra-${i}.webp`, defaultPick: false });
   }
   return list;
 }

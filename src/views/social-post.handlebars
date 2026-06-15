@@ -16,17 +16,18 @@
 <div id="content" style="display:none;">
 
   <div class="card">
-    <h2>1. Pick the photo</h2>
-    <p class="muted" style="margin:-8px 0 12px;font-size:13px;">Click the one you want to share. Each platform card has a Download button that opens this photo full-size so you can save it.</p>
+    <h2>1. Pick photos</h2>
+    <p class="muted" style="margin:-8px 0 12px;font-size:13px;">Tap the photos you want to share — pick one or several (before + after make the strongest post). Each platform card has a Download button that opens every selected photo so you can save them one tap at a time.</p>
     <div id="photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
       {{#each photos}}
-      <label class="photo-pick" data-url="{{url}}">
-        <input type="radio" name="photo" value="{{url}}" {{#if @first}}checked{{/if}}>
+      <label class="photo-pick">
+        <input type="checkbox" name="photo" value="{{url}}" {{#if defaultPick}}checked{{/if}}>
         <img src="{{url}}" alt="{{label}}" loading="lazy">
         <span>{{label}}</span>
       </label>
       {{/each}}
     </div>
+    <p class="muted" id="photo-count" style="font-size:12px;margin:10px 0 0;"></p>
   </div>
 
   <div class="card">
@@ -41,10 +42,10 @@
     <p class="muted" id="fb-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
       <button type="button" class="btn copy-btn" data-platform="facebook">📋 Copy caption + hashtags</button>
-      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.facebook.com/" target="_blank">↗ Open Facebook</a>
     </div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0;">On Facebook → your Page → <strong>Create Post</strong> → paste, attach the downloaded photo.</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0;">On Facebook → your Page → <strong>Create Post</strong> → paste, attach the downloaded photos.</p>
   </div>
 
   <div class="card platform-card" data-platform="instagram">
@@ -53,10 +54,10 @@
     <p class="muted" id="ig-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
       <button type="button" class="btn copy-btn" data-platform="instagram">📋 Copy caption + hashtags</button>
-      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.instagram.com/" target="_blank">↗ Open Instagram</a>
     </div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0;">Instagram posting is mobile-only. Easiest: open the dashboard on your phone, tap Download to save the photo, then post from the Instagram app and paste the caption.</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0;">Instagram posting is mobile-only. Easiest: open the dashboard on your phone, tap Download to save each photo, then make a carousel post from the Instagram app and paste the caption.</p>
   </div>
 
   <div class="card platform-card" data-platform="linkedin">
@@ -65,7 +66,7 @@
     <p class="muted" id="li-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
       <button type="button" class="btn copy-btn" data-platform="linkedin">📋 Copy caption</button>
-      <a class="btn btn-outline download-btn" target="_blank">📷 Download photo</a>
+      <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank">↗ Open LinkedIn composer</a>
     </div>
   </div>
@@ -96,21 +97,29 @@
   var errCard   = document.getElementById('error-card');
   var errMsg    = document.getElementById('error-msg');
   var hashEl    = document.getElementById('hashtags');
+  var photoCount = document.getElementById('photo-count');
   var counters  = { facebook: 'fb-count', instagram: 'ig-count', linkedin: 'li-count' };
   var limits    = { facebook: 63206, instagram: 2200, linkedin: 3000 };
 
   function el(platform) {
     return document.querySelector('.platform-card[data-platform="' + platform + '"] .caption');
   }
-  function currentPhoto() {
-    var picked = document.querySelector('input[name="photo"]:checked');
-    return picked ? picked.value : '';
+  function pickedPhotos() {
+    return Array.prototype.map.call(
+      document.querySelectorAll('input[name="photo"]:checked'),
+      function (i) { return i.value; }
+    );
   }
-  function refreshDownloadLinks() {
-    var url = currentPhoto();
-    document.querySelectorAll('.download-btn').forEach(function (a) {
-      a.href = url;
-      a.setAttribute('download', '');
+  function refreshPhotoCount() {
+    var n = pickedPhotos().length;
+    photoCount.textContent = n === 0
+      ? 'No photos selected — pick at least one.'
+      : n + ' photo' + (n === 1 ? '' : 's') + ' selected. Each Download button will open them one tab at a time.';
+    photoCount.style.color = n === 0 ? '#c62828' : '';
+    document.querySelectorAll('.download-btn').forEach(function (b) {
+      b.textContent = n > 1 ? '📷 Download ' + n + ' photos' : '📷 Download photo';
+      b.disabled = n === 0;
+      b.style.opacity = n === 0 ? '.5' : '';
     });
   }
   function refreshCounter(platform) {
@@ -135,7 +144,7 @@
         hashEl.value = (data.hashtags || []).map(function (t) { return '#' + t; }).join(' ');
         loadCard.style.display = 'none';
         content.style.display = 'block';
-        refreshDownloadLinks();
+        refreshPhotoCount();
         refreshAllCounters();
       })
       .catch(function (err) {
@@ -148,11 +157,28 @@
   document.getElementById('retry-btn').addEventListener('click', load);
   document.getElementById('regen-btn').addEventListener('click', load);
 
-  document.getElementById('photo-grid').addEventListener('change', refreshDownloadLinks);
+  document.getElementById('photo-grid').addEventListener('change', refreshPhotoCount);
   ['facebook','instagram','linkedin'].forEach(function (p) {
     el(p).addEventListener('input', function () { refreshCounter(p); });
   });
   hashEl.addEventListener('input', refreshAllCounters);
+
+  document.querySelectorAll('.download-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var urls = pickedPhotos();
+      if (urls.length === 0) return;
+      // Open each photo in a new tab. Popup blockers usually allow
+      // multi-window opens that originate from a single click. If
+      // the browser blocks tabs 2+, we fall back to opening one and
+      // letting the admin re-click for the rest.
+      urls.forEach(function (u, i) {
+        var w = window.open(u, '_blank');
+        if (!w && i > 0) {
+          alert('Your browser blocked the extra tabs. Click Download again to grab the next photo.');
+        }
+      });
+    });
+  });
 
   document.querySelectorAll('.copy-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {

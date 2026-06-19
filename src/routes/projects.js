@@ -31,9 +31,11 @@ router.use(requireAuth);
 
 // ── Dashboard home: drafts + pending approvals + recently published ──
 router.get('/', (req, res) => {
-  const drafts  = listDrafts();
-  const pending = listPending();
-  const recent  = listPublished({ limit: 10 });
+  // Techs only see their own work; admins see everything.
+  const filter = req.user.role === 'admin' ? {} : { submittedBy: req.user.id };
+  const drafts  = listDrafts(filter);
+  const pending = listPending(filter);
+  const recent  = listPublished({ limit: 10, ...filter });
   res.render('index', { drafts, pending, recent });
 });
 

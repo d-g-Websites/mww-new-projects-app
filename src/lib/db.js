@@ -175,47 +175,41 @@ export function deleteProject(id) {
   db.prepare('DELETE FROM projects WHERE id = ?').run(id);
 }
 
-export function listPending({ limit = 50 } = {}) {
+export function listPending({ limit = 50, submittedBy = null } = {}) {
+  const where = submittedBy ? 'AND projects.submitted_by = @submittedBy' : '';
   return db.prepare(`
     SELECT projects.*, users.display_name AS submitted_by_name
       FROM projects
       LEFT JOIN users ON users.id = projects.submitted_by
-     WHERE projects.status = 'pending'
+     WHERE projects.status = 'pending' ${where}
      ORDER BY projects.created_at DESC
-     LIMIT ?
-  `).all(limit).map(parseExtras);
+     LIMIT @limit
+  `).all({ limit, submittedBy }).map(parseExtras);
 }
 
-export function listDrafts({ limit = 50 } = {}) {
+export function listDrafts({ limit = 50, submittedBy = null } = {}) {
+  const where = submittedBy ? 'AND projects.submitted_by = @submittedBy' : '';
   return db.prepare(`
     SELECT projects.*, users.display_name AS submitted_by_name
       FROM projects
       LEFT JOIN users ON users.id = projects.submitted_by
-     WHERE projects.status = 'draft'
+     WHERE projects.status = 'draft' ${where}
      ORDER BY projects.created_at DESC
-     LIMIT ?
-  `).all(limit).map(parseExtras);
+     LIMIT @limit
+  `).all({ limit, submittedBy }).map(parseExtras);
 }
 
-export function listPublished({ limit = 20, excludeId = null } = {}) {
-  if (excludeId) {
-    return db.prepare(`
-      SELECT projects.*, users.display_name AS submitted_by_name
-        FROM projects
-        LEFT JOIN users ON users.id = projects.submitted_by
-       WHERE projects.status = 'published' AND projects.id != ?
-       ORDER BY projects.published_at DESC
-       LIMIT ?
-    `).all(excludeId, limit).map(parseExtras);
-  }
+export function listPublished({ limit = 20, excludeId = null, submittedBy = null } = {}) {
+  const exclude = excludeId ? 'AND projects.id != @excludeId' : '';
+  const who     = submittedBy ? 'AND projects.submitted_by = @submittedBy' : '';
   return db.prepare(`
     SELECT projects.*, users.display_name AS submitted_by_name
       FROM projects
       LEFT JOIN users ON users.id = projects.submitted_by
-     WHERE projects.status = 'published'
+     WHERE projects.status = 'published' ${exclude} ${who}
      ORDER BY projects.published_at DESC
-     LIMIT ?
-  `).all(limit).map(parseExtras);
+     LIMIT @limit
+  `).all({ limit, excludeId, submittedBy }).map(parseExtras);
 }
 
 // Every published project, newest first. Powers /projects/index.html.

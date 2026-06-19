@@ -1,0 +1,92 @@
+<h2 style="margin:0 0 4px;">⭐ Ask for a Google review</h2>
+<p class="muted" style="margin:0 0 16px;">Pick the hub closest to the job and hand the customer your phone. They scan the QR — review opens straight on the right Business Profile.</p>
+
+{{#unless anyConfigured}}
+<div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;">
+  {{#if isAdmin}}
+  None of the hubs have a review URL set yet. <a href="/review-qr/setup" style="color:#9c4a00;text-decoration:underline;font-weight:700;">Add the URLs once</a> and the QRs will work for the whole team.
+  {{else}}
+  None of the hubs have a review URL set yet. Ask the office to configure it.
+  {{/if}}
+</div>
+{{/unless}}
+
+<div class="card">
+  <div class="field" style="margin-bottom:0;">
+    <label for="hub-pick">Hub</label>
+    <select id="hub-pick">
+      {{#each hubs}}
+      <option value="{{key}}" data-url="{{url}}" {{#if (eq key ../defaultHub)}}selected{{/if}}>
+        {{name}}{{#unless configured}} — not set up yet{{/unless}}
+      </option>
+      {{/each}}
+    </select>
+  </div>
+</div>
+
+<div class="card" id="qr-card" style="text-align:center;padding:24px 16px;">
+  <div id="qr-not-configured" style="display:none;">
+    <p class="muted" style="margin:0 0 4px;">No review URL set for this hub yet.</p>
+    {{#if isAdmin}}
+    <a class="btn btn-outline" href="/review-qr/setup" style="font-size:13px;padding:8px 14px;margin-top:8px;">Set it up</a>
+    {{/if}}
+  </div>
+  <div id="qr-display">
+    <div id="qr-target" style="display:inline-block;background:#fff;padding:16px;border-radius:14px;"></div>
+    <p style="margin:16px 0 4px;font-size:15px;font-weight:700;" id="qr-hub-name"></p>
+    <p class="muted" style="margin:0;font-size:13px;">Customer scans this with their phone camera.</p>
+    <a id="qr-link" href="#" target="_blank" class="muted" style="display:inline-block;margin-top:10px;font-size:12px;word-break:break-all;"></a>
+  </div>
+</div>
+
+{{#if isAdmin}}
+<a class="btn btn-outline btn-block" href="/review-qr/setup" style="text-align:center;font-size:13px;">⚙️ Manage hub review URLs</a>
+{{/if}}
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:10px;">Back to dashboard</a>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+(function () {
+  var picker = document.getElementById('hub-pick');
+  var target = document.getElementById('qr-target');
+  var displayBlock = document.getElementById('qr-display');
+  var notConfigured = document.getElementById('qr-not-configured');
+  var nameEl = document.getElementById('qr-hub-name');
+  var linkEl = document.getElementById('qr-link');
+
+  function render() {
+    var opt = picker.options[picker.selectedIndex];
+    var url = opt.getAttribute('data-url') || '';
+    nameEl.textContent = opt.textContent.replace(/ — not set up yet$/, '');
+    if (!url) {
+      displayBlock.style.display = 'none';
+      notConfigured.style.display = 'block';
+      return;
+    }
+    notConfigured.style.display = 'none';
+    displayBlock.style.display = 'block';
+
+    // Type 0 = auto-size, error correction M (15% recovery — fine for
+    // glare/angles when customer scans from a phone screen).
+    var qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    // 8px per module produces ~250-300px QR at typical density —
+    // big enough to scan from a polite handheld distance.
+    target.innerHTML = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+    // Make the SVG fill its container responsively.
+    var svg = target.querySelector('svg');
+    if (svg) {
+      svg.style.width = '100%';
+      svg.style.maxWidth = '320px';
+      svg.style.height = 'auto';
+      svg.style.display = 'block';
+    }
+    linkEl.href = url;
+    linkEl.textContent = url;
+  }
+
+  picker.addEventListener('change', render);
+  render();
+})();
+</script>

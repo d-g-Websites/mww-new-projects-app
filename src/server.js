@@ -10,6 +10,7 @@ import projectsRouter from './routes/projects.js';
 import usersRouter from './routes/users.js';
 import videosRouter from './routes/videos.js';
 import socialRouter from './routes/social.js';
+import reviewQrRouter from './routes/review-qr.js';
 import { loadUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -76,6 +77,7 @@ app.use('/', authRouter);
 app.use('/', usersRouter);
 app.use('/', videosRouter);
 app.use('/', socialRouter);
+app.use('/', reviewQrRouter);
 app.use('/', projectsRouter);
 
 // Global error handler — surfaces stack only in non-prod.

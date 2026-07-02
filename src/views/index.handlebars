@@ -88,6 +88,7 @@
         {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
         <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
           <form method="post" action="/projects/{{id}}/pay" style="margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <input type="hidden" name="page" value="{{#if @root.pagination}}{{@root.pagination.page}}{{else}}1{{/if}}">
             <span style="font-size:14px;color:#475569;">$</span>
             <input name="amount" type="number" step="1" min="0" value="{{pay_amount_display}}"
                    title="{{#if pay_amount_is_suggested}}Suggested from the payment tiers — save to lock in{{else}}Saved amount{{/if}}"
@@ -113,6 +114,22 @@
   </ul>
   {{else}}
   <p class="muted">No projects published yet.</p>
+  {{/if}}
+
+  {{#if pagination}}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+    {{#if pagination.prev}}
+    <a class="btn btn-outline" href="/?page={{pagination.prev}}" style="padding:9px 16px;font-size:14px;">← Newer</a>
+    {{else}}
+    <span></span>
+    {{/if}}
+    <span class="muted" style="font-size:13px;">{{pagination.from}}–{{pagination.to}} of {{pagination.total}} · page {{pagination.page}} / {{pagination.pages}}</span>
+    {{#if pagination.next}}
+    <a class="btn btn-outline" href="/?page={{pagination.next}}" style="padding:9px 16px;font-size:14px;">Older →</a>
+    {{else}}
+    <span></span>
+    {{/if}}
+  </div>
   {{/if}}
 </div>
 

@@ -201,7 +201,7 @@ export function listDrafts({ limit = 50, submittedBy = null } = {}) {
   `).all({ limit, submittedBy }).map(parseExtras);
 }
 
-export function listPublished({ limit = 20, excludeId = null, submittedBy = null } = {}) {
+export function listPublished({ limit = 20, offset = 0, excludeId = null, submittedBy = null } = {}) {
   const exclude = excludeId ? 'AND projects.id != @excludeId' : '';
   const who     = submittedBy ? 'AND projects.submitted_by = @submittedBy' : '';
   return db.prepare(`
@@ -210,8 +210,16 @@ export function listPublished({ limit = 20, excludeId = null, submittedBy = null
       LEFT JOIN users ON users.id = projects.submitted_by
      WHERE projects.status = 'published' ${exclude} ${who}
      ORDER BY projects.published_at DESC
-     LIMIT @limit
-  `).all({ limit, excludeId, submittedBy }).map(parseExtras);
+     LIMIT @limit OFFSET @offset
+  `).all({ limit, offset, excludeId, submittedBy }).map(parseExtras);
+}
+
+export function countPublished({ submittedBy = null } = {}) {
+  const who = submittedBy ? 'AND submitted_by = @submittedBy' : '';
+  return db.prepare(`
+    SELECT COUNT(*) AS n FROM projects
+     WHERE status = 'published' ${who}
+  `).get({ submittedBy }).n;
 }
 
 // Every published project, newest first. Powers /projects/index.html.

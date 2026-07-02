@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, getHub, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
-import { insertDraft, updateDraft, getProject, listPublished, listPending, listDrafts, markPending, deleteProject, listUsers } from '../lib/db.js';
+import { insertDraft, updateDraft, getProject, listPublished, countPublished, listPending, listDrafts, markPending, deleteProject, listUsers } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
 
 // Placeholder text shown when Claude narrative generation fails, so
@@ -47,12 +47,23 @@ export function suggestedPay(p) {
 }
 
 // ── Dashboard home: drafts + pending approvals + recently published ──
+const PUBLISHED_PER_PAGE = 10;
+
 router.get('/', (req, res) => {
   // Techs only see their own work; admins see everything.
   const filter = req.user.role === 'admin' ? {} : { submittedBy: req.user.id };
   const drafts  = listDrafts(filter);
   const pending = listPending(filter);
-  const recent  = listPublished({ limit: 10, ...filter }).map(p => ({
+
+  const total = countPublished(filter);
+  const pages = Math.max(1, Math.ceil(total / PUBLISHED_PER_PAGE));
+  const page  = Math.min(pages, Math.max(1, parseInt(req.query.page, 10) || 1));
+
+  const recent = listPublished({
+    limit: PUBLISHED_PER_PAGE,
+    offset: (page - 1) * PUBLISHED_PER_PAGE,
+    ...filter,
+  }).map(p => ({
     ...p,
     pay_status: p.pay_status || 'unpaid',
     // What the amount input should show: the saved amount if the admin
@@ -60,7 +71,17 @@ router.get('/', (req, res) => {
     pay_amount_display: p.pay_amount != null ? p.pay_amount : suggestedPay(p),
     pay_amount_is_suggested: p.pay_amount == null,
   }));
-  res.render('index', { drafts, pending, recent });
+
+  res.render('index', {
+    drafts, pending, recent,
+    pagination: pages > 1 ? {
+      page, pages, total,
+      prev: page > 1 ? page - 1 : null,
+      next: page < pages ? page + 1 : null,
+      from: (page - 1) * PUBLISHED_PER_PAGE + 1,
+      to: Math.min(page * PUBLISHED_PER_PAGE, total),
+    } : null,
+  });
 });
 
 // ── Payment tracking (admin): set amount / toggle paid ───────────────
@@ -74,7 +95,9 @@ router.post('/projects/:id/pay', requireAdmin, (req, res) => {
     patch.pay_status = (p.pay_status || 'unpaid') === 'paid' ? 'unpaid' : 'paid';
   }
   updateDraft(p.id, patch);
-  res.redirect('/');
+  // Stay on whichever page of the published list the admin was viewing.
+  const page = parseInt(req.body.page, 10) || 1;
+  res.redirect(page > 1 ? `/?page=${page}` : '/');
 });
 
 // ── Payment structure reference page (all users) ─────────────────────

@@ -29,14 +29,57 @@ const upload = multer({
 
 router.use(requireAuth);
 
+// Payment tiers for tech submissions. The suggested amount is derived
+// from what the published project actually contains; admin can
+// override before marking paid.
+//   $10  before/after + required descriptions
+//   $15  + extra gallery photos
+//   $20  + video
+//   $25  + customer review (on top of extras + video)
+export function suggestedPay(p) {
+  const hasExtras = Array.isArray(p.extra_photos) && p.extra_photos.length > 0;
+  const hasVideo  = Boolean(p.video_url);
+  const hasReview = Boolean(p.review_text && String(p.review_text).trim());
+  if (hasExtras && hasVideo && hasReview) return 25;
+  if (hasExtras && hasVideo) return 20;
+  if (hasExtras) return 15;
+  return 10;
+}
+
 // ── Dashboard home: drafts + pending approvals + recently published ──
 router.get('/', (req, res) => {
   // Techs only see their own work; admins see everything.
   const filter = req.user.role === 'admin' ? {} : { submittedBy: req.user.id };
   const drafts  = listDrafts(filter);
   const pending = listPending(filter);
-  const recent  = listPublished({ limit: 10, ...filter });
+  const recent  = listPublished({ limit: 10, ...filter }).map(p => ({
+    ...p,
+    pay_status: p.pay_status || 'unpaid',
+    // What the amount input should show: the saved amount if the admin
+    // set one, otherwise the tier suggestion.
+    pay_amount_display: p.pay_amount != null ? p.pay_amount : suggestedPay(p),
+    pay_amount_is_suggested: p.pay_amount == null,
+  }));
   res.render('index', { drafts, pending, recent });
+});
+
+// ── Payment tracking (admin): set amount / toggle paid ───────────────
+router.post('/projects/:id/pay', requireAdmin, (req, res) => {
+  const p = getProject(Number(req.params.id));
+  if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+  const raw = (req.body.amount ?? '').toString().trim().replace(/^\$/, '');
+  const amount = raw === '' ? null : Number(raw);
+  const patch = { pay_amount: Number.isFinite(amount) ? amount : null };
+  if (req.body.do === 'toggle') {
+    patch.pay_status = (p.pay_status || 'unpaid') === 'paid' ? 'unpaid' : 'paid';
+  }
+  updateDraft(p.id, patch);
+  res.redirect('/');
+});
+
+// ── Payment structure reference page (all users) ─────────────────────
+router.get('/pay-structure', (req, res) => {
+  res.render('pay-structure');
 });
 
 // ── Step 1 of new-project flow: pick a service. ──

@@ -81,6 +81,8 @@ ensureColumn('address_lng', 'REAL');
 ensureColumn('video_url', 'TEXT');     // optional YouTube / Vimeo URL the tech pastes
 ensureColumn('faq', 'TEXT');           // JSON array of {q, a} pairs for FAQPage schema + on-page section
 ensureColumn('submitted_by', 'INTEGER'); // FK to users.id — who entered this project
+ensureColumn('pay_status', "TEXT DEFAULT 'unpaid'"); // 'unpaid' | 'paid' — tech compensation for the submission
+ensureColumn('pay_amount', 'REAL');      // dollars owed/paid for this submission
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers

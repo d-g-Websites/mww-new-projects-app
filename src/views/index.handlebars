@@ -66,6 +66,27 @@
 
 <div class="card">
   <h2>Recently published</h2>
+
+  {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
+  <form method="get" action="/" id="pub-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;">
+    <select name="pay" onchange="document.getElementById('pub-filters').submit()"
+            style="width:auto;padding:8px 10px;font-size:14px;">
+      <option value="">Paid + unpaid</option>
+      <option value="unpaid" {{#if (eq payFilter "unpaid")}}selected{{/if}}>Unpaid only</option>
+      <option value="paid"   {{#if (eq payFilter "paid")}}selected{{/if}}>Paid only</option>
+    </select>
+    <select name="tech" onchange="document.getElementById('pub-filters').submit()"
+            style="width:auto;padding:8px 10px;font-size:14px;">
+      <option value="">All technicians</option>
+      {{#each techChoices}}
+      <option value="{{id}}" {{#if (eq id ../techFilter)}}selected{{/if}}>{{display_name}}</option>
+      {{/each}}
+    </select>
+    {{#if filtersActive}}
+    <a href="/" class="muted" style="font-size:13px;">✕ Clear filters</a>
+    {{/if}}
+  </form>
+  {{/if}}{{/if}}
   {{#if recent.length}}
   <ul class="list">
     {{#each recent}}
@@ -89,6 +110,8 @@
         <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
           <form method="post" action="/projects/{{id}}/pay" style="margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <input type="hidden" name="page" value="{{#if @root.pagination}}{{@root.pagination.page}}{{else}}1{{/if}}">
+            <input type="hidden" name="pay" value="{{@root.payFilter}}">
+            <input type="hidden" name="tech" value="{{@root.techFilter}}">
             <span style="font-size:14px;color:#475569;">$</span>
             <input name="amount" type="number" step="1" min="0" value="{{pay_amount_display}}"
                    title="{{#if pay_amount_is_suggested}}Suggested from the payment tiers — save to lock in{{else}}Saved amount{{/if}}"
@@ -113,19 +136,19 @@
     {{/each}}
   </ul>
   {{else}}
-  <p class="muted">No projects published yet.</p>
+  <p class="muted">{{#if filtersActive}}Nothing matches these filters.{{else}}No projects published yet.{{/if}}</p>
   {{/if}}
 
   {{#if pagination}}
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
     {{#if pagination.prev}}
-    <a class="btn btn-outline" href="/?page={{pagination.prev}}" style="padding:9px 16px;font-size:14px;">← Newer</a>
+    <a class="btn btn-outline" href="/?page={{pagination.prev}}{{#if filterQs}}&{{filterQs}}{{/if}}" style="padding:9px 16px;font-size:14px;">← Newer</a>
     {{else}}
     <span></span>
     {{/if}}
     <span class="muted" style="font-size:13px;">{{pagination.from}}–{{pagination.to}} of {{pagination.total}} · page {{pagination.page}} / {{pagination.pages}}</span>
     {{#if pagination.next}}
-    <a class="btn btn-outline" href="/?page={{pagination.next}}" style="padding:9px 16px;font-size:14px;">Older →</a>
+    <a class="btn btn-outline" href="/?page={{pagination.next}}{{#if filterQs}}&{{filterQs}}{{/if}}" style="padding:9px 16px;font-size:14px;">Older →</a>
     {{else}}
     <span></span>
     {{/if}}

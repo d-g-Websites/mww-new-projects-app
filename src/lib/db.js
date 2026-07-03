@@ -201,25 +201,28 @@ export function listDrafts({ limit = 50, submittedBy = null } = {}) {
   `).all({ limit, submittedBy }).map(parseExtras);
 }
 
-export function listPublished({ limit = 20, offset = 0, excludeId = null, submittedBy = null } = {}) {
+export function listPublished({ limit = 20, offset = 0, excludeId = null, submittedBy = null, payStatus = null } = {}) {
   const exclude = excludeId ? 'AND projects.id != @excludeId' : '';
   const who     = submittedBy ? 'AND projects.submitted_by = @submittedBy' : '';
+  // pay_status predates some rows — NULL means unpaid.
+  const pay     = payStatus ? "AND COALESCE(projects.pay_status, 'unpaid') = @payStatus" : '';
   return db.prepare(`
     SELECT projects.*, users.display_name AS submitted_by_name
       FROM projects
       LEFT JOIN users ON users.id = projects.submitted_by
-     WHERE projects.status = 'published' ${exclude} ${who}
+     WHERE projects.status = 'published' ${exclude} ${who} ${pay}
      ORDER BY projects.published_at DESC
      LIMIT @limit OFFSET @offset
-  `).all({ limit, offset, excludeId, submittedBy }).map(parseExtras);
+  `).all({ limit, offset, excludeId, submittedBy, payStatus }).map(parseExtras);
 }
 
-export function countPublished({ submittedBy = null } = {}) {
+export function countPublished({ submittedBy = null, payStatus = null } = {}) {
   const who = submittedBy ? 'AND submitted_by = @submittedBy' : '';
+  const pay = payStatus ? "AND COALESCE(pay_status, 'unpaid') = @payStatus" : '';
   return db.prepare(`
     SELECT COUNT(*) AS n FROM projects
-     WHERE status = 'published' ${who}
-  `).get({ submittedBy }).n;
+     WHERE status = 'published' ${who} ${pay}
+  `).get({ submittedBy, payStatus }).n;
 }
 
 // Every published project, newest first. Powers /projects/index.html.

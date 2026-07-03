@@ -51,18 +51,30 @@ const PUBLISHED_PER_PAGE = 10;
 
 router.get('/', (req, res) => {
   // Techs only see their own work; admins see everything.
-  const filter = req.user.role === 'admin' ? {} : { submittedBy: req.user.id };
-  const drafts  = listDrafts(filter);
-  const pending = listPending(filter);
+  const isAdmin = req.user.role === 'admin';
+  const scope = isAdmin ? {} : { submittedBy: req.user.id };
+  const drafts  = listDrafts(scope);
+  const pending = listPending(scope);
 
-  const total = countPublished(filter);
+  // Published-list filters. Pay filter is available to both roles;
+  // the technician filter only makes sense for admins (techs are
+  // already scoped to themselves).
+  const payFilter = ['paid', 'unpaid'].includes(req.query.pay) ? req.query.pay : null;
+  const techFilter = isAdmin ? (parseInt(req.query.tech, 10) || null) : null;
+  const pubFilter = {
+    ...scope,
+    ...(techFilter ? { submittedBy: techFilter } : {}),
+    ...(payFilter ? { payStatus: payFilter } : {}),
+  };
+
+  const total = countPublished(pubFilter);
   const pages = Math.max(1, Math.ceil(total / PUBLISHED_PER_PAGE));
   const page  = Math.min(pages, Math.max(1, parseInt(req.query.page, 10) || 1));
 
   const recent = listPublished({
     limit: PUBLISHED_PER_PAGE,
     offset: (page - 1) * PUBLISHED_PER_PAGE,
-    ...filter,
+    ...pubFilter,
   }).map(p => ({
     ...p,
     pay_status: p.pay_status || 'unpaid',
@@ -72,8 +84,20 @@ router.get('/', (req, res) => {
     pay_amount_is_suggested: p.pay_amount == null,
   }));
 
+  // Query-string fragment (minus page) so pagination links + the pay
+  // form's redirect can preserve active filters.
+  const filterQs = [
+    payFilter ? `pay=${payFilter}` : '',
+    techFilter ? `tech=${techFilter}` : '',
+  ].filter(Boolean).join('&');
+
   res.render('index', {
     drafts, pending, recent,
+    payFilter,
+    techFilter,
+    techChoices: isAdmin ? listUsers() : [],
+    filterQs,
+    filtersActive: Boolean(payFilter || techFilter),
     pagination: pages > 1 ? {
       page, pages, total,
       prev: page > 1 ? page - 1 : null,
@@ -95,9 +119,15 @@ router.post('/projects/:id/pay', requireAdmin, (req, res) => {
     patch.pay_status = (p.pay_status || 'unpaid') === 'paid' ? 'unpaid' : 'paid';
   }
   updateDraft(p.id, patch);
-  // Stay on whichever page of the published list the admin was viewing.
+  // Stay on whichever page + filters of the published list the admin
+  // was viewing.
   const page = parseInt(req.body.page, 10) || 1;
-  res.redirect(page > 1 ? `/?page=${page}` : '/');
+  const params = [];
+  if (page > 1) params.push(`page=${page}`);
+  if (['paid', 'unpaid'].includes(req.body.pay)) params.push(`pay=${req.body.pay}`);
+  const techId = parseInt(req.body.tech, 10);
+  if (techId) params.push(`tech=${techId}`);
+  res.redirect(params.length ? `/?${params.join('&')}` : '/');
 });
 
 // ── Payment structure reference page (all users) ─────────────────────

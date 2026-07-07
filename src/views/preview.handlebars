@@ -48,6 +48,7 @@
 </form>
 <p class="muted" style="margin-top:8px;">This locks in the project and notifies the admin via Telegram. The admin then reviews and publishes from the dashboard.</p>
 {{else if (eq project.status 'pending')}}
+{{#if (eq currentUser.role "admin")}}
 <div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
   <strong>Awaiting admin approval.</strong> Use the buttons below to publish or delete.
 </div>
@@ -58,6 +59,11 @@
       onsubmit="return confirm('Permanently delete this project?');">
   <button type="submit" class="btn btn-outline btn-block" style="color:#c62828;border-color:#ef9a9a;">Delete project</button>
 </form>
+{{else}}
+<div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
+  <strong>Submitted — awaiting admin approval.</strong> The office has been notified and will review and publish it. You can still fix the narrative or review text above while it waits.
+</div>
+{{/if}}
 {{else}}
 <div class="alert alert-success">Already published. <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">View live</a></div>
 {{#if currentUser}}{{#if (eq currentUser.role "admin")}}

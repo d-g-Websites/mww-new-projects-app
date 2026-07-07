@@ -756,7 +756,7 @@ router.post('/projects/:id/save', async (req, res, next) => {
 
 // Admin's "Publish" button — write artifacts to the site repo, patch
 // spoke + sitemap, commit + push.
-router.post('/projects/:id/publish', async (req, res, next) => {
+router.post('/projects/:id/publish', requireAdmin, async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
@@ -788,6 +788,11 @@ router.post('/projects/:id/delete', async (req, res, next) => {
       }
       const result = await unpublishProject(p);
       return res.render('unpublished', { project: p, result });
+    }
+
+    // Techs can only discard their own drafts / pending submissions.
+    if (req.user?.role !== 'admin' && p.submitted_by !== req.user.id) {
+      return res.status(403).render('error', { message: 'You can only delete your own submissions.' });
     }
 
     deleteProject(p.id);

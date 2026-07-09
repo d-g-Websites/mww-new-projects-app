@@ -656,10 +656,18 @@ router.get('/projects/:id/edit', requireAdmin, (req, res) => {
   if (p.status !== 'published') {
     return res.redirect(`/projects/${p.id}/preview`);
   }
+  const galleryCount = Array.isArray(p.extra_photos) ? p.extra_photos.length : 0;
   res.render('edit-project', {
     project: p,
     formValues: p,
     challengeChoices: CHALLENGE_CHOICES[p.service] || [],
+    // Existing gallery photos (live URLs) + how many of the 5 slots
+    // are still open for new uploads.
+    gallery: Array.from({ length: galleryCount }, (_, i) => ({
+      n: i + 1,
+      url: `https://www.mywindowwashing.com/projects/img/${p.slug}-extra-${i + 1}.webp`,
+    })),
+    openSlots: Array.from({ length: Math.max(0, 5 - galleryCount) }, (_, i) => galleryCount + i + 1),
   });
 });
 
@@ -668,6 +676,7 @@ router.post('/projects/:id/edit',
   upload.fields([
     { name: 'before', maxCount: 1 },
     { name: 'after',  maxCount: 1 },
+    { name: 'extras', maxCount: 5 },
   ]),
   async (req, res, next) => {
     try {
@@ -718,6 +727,26 @@ router.post('/projects/:id/edit',
         await (await import('../lib/photos.js')).resizeToWebp(req.files.after[0].path, out);
         replacedPhotos.after = out;
         updateDraft(p.id, { after_photo: out });
+      }
+
+      // New gallery photos — appended after the existing ones so the
+      // established `<slug>-extra-<n>.webp` numbering (which the live
+      // page + schema already reference) never shifts. Caps at 5 total.
+      const newGalleryFiles = (req.files?.extras || []).filter(f => f && f.size > 0);
+      if (newGalleryFiles.length) {
+        const { resizeToWebp } = await import('../lib/photos.js');
+        const existing = Array.isArray(p.extra_photos) ? [...p.extra_photos] : [];
+        const room = Math.max(0, 5 - existing.length);
+        const added = [];
+        for (let i = 0; i < Math.min(room, newGalleryFiles.length); i++) {
+          const out = join(stagedDir, `${p.slug}-extra-${existing.length + i + 1}.webp`);
+          await resizeToWebp(newGalleryFiles[i].path, out);
+          added.push(out);
+        }
+        if (added.length) {
+          replacedPhotos.extras = added;
+          updateDraft(p.id, { extra_photos: JSON.stringify([...existing, ...added]) });
+        }
       }
 
       // Re-render the project HTML and push.

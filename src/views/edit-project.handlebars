@@ -41,7 +41,7 @@
 
   <div class="card">
     <h2>Photos</h2>
-    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Replace before/after by uploading a new file. Leave blank to keep the current photo. Gallery photos aren't editable here yet.</p>
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Replace before/after by uploading a new file. Leave blank to keep the current photo.</p>
     <div class="field">
       <label for="before">Before photo</label>
       <input id="before" name="before" type="file" accept="image/*">
@@ -58,6 +58,33 @@
         <span class="existing-tag">Currently live</span>
       </div>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Gallery photos <small style="font-weight:400;color:#8a9db0;">({{gallery.length}} of 5 used)</small></h2>
+    {{#if gallery.length}}
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Current gallery. Existing photos can't be swapped here — add new ones below, or delete + recreate the project to start the gallery over.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
+      {{#each gallery}}
+      <div>
+        <img src="{{url}}" alt="Gallery photo {{n}}" style="width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;border:1px solid #e0e8f0;background:#f5f8fa;">
+        <span class="existing-tag" style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#8a9db0;text-transform:uppercase;">Photo {{n}}</span>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{#if openSlots.length}}
+    <p style="font-size:13px;color:#8a9db0;margin:0 0 12px;">Add up to {{openSlots.length}} more. The first gallery photo is the page's hero image; new ones land at the end.</p>
+    {{#each openSlots}}
+    <div class="field">
+      <label for="extra-new-{{this}}">Add photo {{this}}</label>
+      <input id="extra-new-{{this}}" name="extras" type="file" accept="image/*">
+      <div class="photo-preview"></div>
+    </div>
+    {{/each}}
+    {{else}}
+    <p class="muted" style="margin:0;">All 5 gallery slots are used.</p>
+    {{/if}}
   </div>
 
   <div class="card">

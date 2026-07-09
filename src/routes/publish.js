@@ -160,6 +160,15 @@ export async function republishProject(project, { replacedPhotos = {} } = {}) {
     copyFileSync(replacedPhotos.after, dest);
     touchedPhotos.push(dest);
   }
+  // Newly added / replaced gallery photos — already staged with their
+  // final `<slug>-extra-<n>.webp` filenames, so a straight copy keeps
+  // the numbering the template + schema expect.
+  for (const src of replacedPhotos.extras || []) {
+    if (!existsSync(src)) continue;
+    const dest = join(imgDir, basename(src));
+    copyFileSync(src, dest);
+    touchedPhotos.push(dest);
+  }
 
   // Regenerate archives that reference this project's content (the
   // hero card thumb + title might have changed; price + service-type

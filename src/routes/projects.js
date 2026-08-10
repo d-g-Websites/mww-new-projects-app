@@ -50,10 +50,12 @@ export function suggestedPay(p) {
 const PUBLISHED_PER_PAGE = 10;
 
 router.get('/', (req, res) => {
-  // Techs only see their own work; admins see everything.
+  // Techs only see their own work; admins see everything — except
+  // drafts, which are unfinished work-in-progress belonging to
+  // whoever is credited on them. They only surface for that user.
   const isAdmin = req.user.role === 'admin';
   const scope = isAdmin ? {} : { submittedBy: req.user.id };
-  const drafts  = listDrafts(scope);
+  const drafts  = listDrafts({ submittedBy: req.user.id });
   const pending = listPending(scope);
 
   // Published-list filters. Pay filter is available to both roles;

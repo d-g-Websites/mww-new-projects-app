@@ -10,6 +10,27 @@ import {
 } from '../lib/db.js';
 import { writeAffectedArchives, currentArchiveUrls } from '../lib/archive.js';
 import { unlinkSync, existsSync as fsExistsSync } from 'node:fs';
+import { generateSocialPosts } from '../lib/social-post.js';
+import { publishToFacebook } from '../lib/zernio.js';
+
+// Optional: auto-post a new project to Facebook via Zernio right after
+// it's published. Off unless ZERNIO_AUTOPOST_ON_PUBLISH=true so the
+// default flow stays the manual "Post to Facebook now" button. Never
+// throws — a Zernio hiccup must not fail a publish.
+async function maybeAutoPostFacebook(project) {
+  if (process.env.ZERNIO_AUTOPOST_ON_PUBLISH !== 'true') return;
+  try {
+    const posts = await generateSocialPosts(project);
+    const tags  = (posts.hashtags || []).map(h => '#' + h).join(' ');
+    const base  = `https://www.mywindowwashing.com/projects/img/${project.slug}`;
+    const content = posts.facebook + (tags ? `\n\n${tags}` : '');
+    const result = await publishToFacebook(content, [`${base}-before.webp`, `${base}-after.webp`]);
+    if (result.ok) console.log('[publish] auto-posted to Facebook:', result.id);
+    else if (!result.skipped) console.error('[publish] facebook auto-post failed:', result.error);
+  } catch (e) {
+    console.error('[publish] facebook auto-post error (non-fatal):', e.message);
+  }
+}
 
 // Run the four side-effects in order:
 //   1. Write projects/<slug>.html
@@ -111,6 +132,11 @@ export async function publishProject(project) {
     message,
     push: pushFlag,
   });
+
+  // Optionally announce the new project on Facebook (no-op unless
+  // ZERNIO_AUTOPOST_ON_PUBLISH=true). Awaited but self-contained: it
+  // swallows its own errors so a failure here never breaks publish.
+  await maybeAutoPostFacebook(freshProject);
 
   return {
     projectPath:  basename(projectPath),

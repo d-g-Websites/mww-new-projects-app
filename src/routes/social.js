@@ -8,6 +8,7 @@ import express from 'express';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { getProject } from '../lib/db.js';
 import { generateSocialPosts } from '../lib/social-post.js';
+import { publishToFacebook } from '../lib/zernio.js';
 
 const router = Router();
 
@@ -56,6 +57,35 @@ router.post('/projects/:id/social/generate', requireAuth, requireAdmin, express.
     res.json(posts);
   } catch (err) {
     console.error('[social] generate failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Publish the Facebook caption + selected photos straight to the
+// connected Facebook Page via Zernio. The client sends the final
+// `content` string (caption + hashtags, as the admin edited it) plus
+// the chosen public photo URLs. Falls back to freshly generated copy
+// when `content` is omitted (e.g. a server-side caller).
+router.post('/projects/:id/social/publish-facebook', requireAuth, requireAdmin, express.json(), async (req, res) => {
+  try {
+    const project = getProject(Number(req.params.id));
+    if (!project) return res.status(404).json({ error: 'project not found' });
+
+    let { content, photoUrls } = req.body || {};
+    if (!content) {
+      const posts = await generateSocialPosts(project);
+      const tags = (posts.hashtags || []).map(h => '#' + h).join(' ');
+      content = posts.facebook + (tags ? '\n\n' + tags : '');
+    }
+
+    const result = await publishToFacebook(content, Array.isArray(photoUrls) ? photoUrls : []);
+    if (result.skipped) {
+      return res.status(400).json({ error: 'Zernio is not configured on the server (set ZERNIO_API_KEY + ZERNIO_ACCOUNT_ID).' });
+    }
+    if (!result.ok) return res.status(502).json({ error: result.error });
+    res.json({ ok: true, id: result.id });
+  } catch (err) {
+    console.error('[social] publish-facebook failed:', err);
     res.status(500).json({ error: err.message });
   }
 });

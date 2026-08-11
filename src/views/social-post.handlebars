@@ -41,11 +41,12 @@
     <textarea class="caption" rows="5" style="font-family:inherit;font-size:14px;"></textarea>
     <p class="muted" id="fb-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
+      <button type="button" class="btn" id="fb-publish-btn" style="background:#1877f2;">🚀 Post to Facebook now</button>
       <button type="button" class="btn copy-btn" data-platform="facebook">📋 Copy caption + hashtags</button>
       <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.facebook.com/" target="_blank">↗ Open Facebook</a>
     </div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0;">On Facebook → your Page → <strong>Create Post</strong> → paste, attach the downloaded photos.</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0;"><strong>Post to Facebook now</strong> publishes the caption + selected photos straight to your Page via Zernio. Or copy &amp; paste manually with the buttons on the right.</p>
   </div>
 
   <div class="card platform-card" data-platform="instagram">
@@ -196,6 +197,35 @@
       }, function () { alert('Couldn’t copy to clipboard. Select the text manually.'); });
     });
   });
+
+  // "Post to Facebook now" — sends the edited caption + hashtags and the
+  // selected photo URLs to the server, which relays to Zernio.
+  var fbPublishBtn = document.getElementById('fb-publish-btn');
+  if (fbPublishBtn) {
+    fbPublishBtn.addEventListener('click', function () {
+      var urls = pickedPhotos();
+      var content = el('facebook').value + '\n\n' + hashEl.value;
+      var original = fbPublishBtn.textContent;
+      fbPublishBtn.disabled = true;
+      fbPublishBtn.textContent = '⏳ Posting…';
+      fetch('/projects/' + projectId + '/social/publish-facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content, photoUrls: urls })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.d.error || 'Post failed');
+          fbPublishBtn.textContent = '✅ Posted to Facebook';
+          fbPublishBtn.style.background = '#2e7d32';
+        })
+        .catch(function (err) {
+          fbPublishBtn.disabled = false;
+          fbPublishBtn.textContent = original;
+          alert('Facebook post failed: ' + err.message);
+        });
+    });
+  }
 
   load();
 })();

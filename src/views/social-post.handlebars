@@ -28,6 +28,7 @@
       {{/each}}
     </div>
     <p class="muted" id="photo-count" style="font-size:12px;margin:10px 0 0;"></p>
+    <button type="button" class="btn btn-outline" id="dl-all-btn" style="font-size:12px;padding:6px 12px;margin-top:10px;">⬇ Download all photos (JPG)</button>
   </div>
 
   <div class="card">
@@ -197,6 +198,26 @@
           alert(cap(platform) + ' post failed: ' + res.error);
         }
       });
+    });
+  });
+
+  // "Download all photos" — saves every project photo as JPG via the
+  // same-origin proxy (so the download attribute works and you get real
+  // JPG files, not webp). Staggered so the browser allows the batch.
+  document.getElementById('dl-all-btn').addEventListener('click', function () {
+    var inputs = document.querySelectorAll('#photo-grid input[name="photo"]');
+    if (inputs.length === 0) return;
+    Array.prototype.forEach.call(inputs, function (inp, i) {
+      var m = String(inp.value).match(/\/([A-Za-z0-9_-]+)\.webp/i);
+      var name = m ? m[1] : ('photo-' + (i + 1));
+      setTimeout(function () {
+        var a = document.createElement('a');
+        a.href = location.origin + '/media/jpg/' + name + '.jpg';
+        a.download = name + '.jpg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, i * 400);
     });
   });
 

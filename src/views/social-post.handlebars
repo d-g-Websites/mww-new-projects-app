@@ -41,7 +41,7 @@
     <textarea class="caption" rows="5" style="font-family:inherit;font-size:14px;"></textarea>
     <p class="muted" id="fb-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
-      <button type="button" class="btn" id="fb-publish-btn" style="background:#1877f2;">🚀 Post to Facebook now</button>
+      <button type="button" class="btn publish-btn" data-platform="facebook" style="background:#1877f2;color:#fff;">🚀 Post to Facebook now</button>
       <button type="button" class="btn copy-btn" data-platform="facebook">📋 Copy caption + hashtags</button>
       <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.facebook.com/" target="_blank">↗ Open Facebook</a>
@@ -54,6 +54,7 @@
     <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
     <p class="muted" id="ig-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
+      <button type="button" class="btn publish-btn" data-platform="instagram" style="background:#c13584;color:#fff;">🚀 Post to Instagram now</button>
       <button type="button" class="btn copy-btn" data-platform="instagram">📋 Copy caption + hashtags</button>
       <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.instagram.com/" target="_blank">↗ Open Instagram</a>
@@ -66,6 +67,7 @@
     <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
     <p class="muted" id="li-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
     <div class="action-row">
+      <button type="button" class="btn publish-btn" data-platform="linkedin" style="background:#0a66c2;color:#fff;">🚀 Post to LinkedIn now</button>
       <button type="button" class="btn copy-btn" data-platform="linkedin">📋 Copy caption</button>
       <button type="button" class="btn btn-outline download-btn">📷 Download photos</button>
       <a class="btn btn-outline" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank">↗ Open LinkedIn composer</a>
@@ -198,34 +200,43 @@
     });
   });
 
-  // "Post to Facebook now" — sends the edited caption + hashtags and the
-  // selected photo URLs to the server, which relays to Zernio.
-  var fbPublishBtn = document.getElementById('fb-publish-btn');
-  if (fbPublishBtn) {
-    fbPublishBtn.addEventListener('click', function () {
+  // "Post to <platform> now" — sends the edited caption (+ hashtags for
+  // Facebook/Instagram; LinkedIn skips them) and the selected photo URLs
+  // to the server, which relays to Zernio. One handler for all three.
+  function contentFor(platform) {
+    var body = el(platform).value;
+    return (platform === 'linkedin') ? body : (body + '\n\n' + hashEl.value);
+  }
+  document.querySelectorAll('.publish-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var platform = btn.dataset.platform;
       var urls = pickedPhotos();
-      var content = el('facebook').value + '\n\n' + hashEl.value;
-      var original = fbPublishBtn.textContent;
-      fbPublishBtn.disabled = true;
-      fbPublishBtn.textContent = '⏳ Posting…';
-      fetch('/projects/' + projectId + '/social/publish-facebook', {
+      if (platform === 'instagram' && urls.length === 0) {
+        alert('Instagram needs at least one photo — pick a before/after above first.');
+        return;
+      }
+      var original = btn.dataset.label || btn.textContent;
+      btn.dataset.label = original;
+      btn.disabled = true;
+      btn.textContent = '⏳ Posting…';
+      fetch('/projects/' + projectId + '/social/publish-' + platform, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content, photoUrls: urls })
+        body: JSON.stringify({ content: contentFor(platform), photoUrls: urls })
       })
         .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
         .then(function (res) {
           if (!res.ok) throw new Error(res.d.error || 'Post failed');
-          fbPublishBtn.textContent = '✅ Posted to Facebook';
-          fbPublishBtn.style.background = '#2e7d32';
+          btn.textContent = '✅ Posted';
+          btn.style.background = '#2e7d32';
         })
         .catch(function (err) {
-          fbPublishBtn.disabled = false;
-          fbPublishBtn.textContent = original;
-          alert('Facebook post failed: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = original;
+          alert(platform.charAt(0).toUpperCase() + platform.slice(1) + ' post failed: ' + err.message);
         });
     });
-  }
+  });
 
   load();
 })();

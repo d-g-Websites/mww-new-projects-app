@@ -8,7 +8,7 @@ import express from 'express';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { getProject } from '../lib/db.js';
 import { generateSocialPosts } from '../lib/social-post.js';
-import { publishToFacebook } from '../lib/zernio.js';
+import { publishToFacebook, publishToInstagram, publishToLinkedIn } from '../lib/zernio.js';
 
 const router = Router();
 
@@ -61,33 +61,49 @@ router.post('/projects/:id/social/generate', requireAuth, requireAdmin, express.
   }
 });
 
-// Publish the Facebook caption + selected photos straight to the
-// connected Facebook Page via Zernio. The client sends the final
-// `content` string (caption + hashtags, as the admin edited it) plus
-// the chosen public photo URLs. Falls back to freshly generated copy
-// when `content` is omitted (e.g. a server-side caller).
-router.post('/projects/:id/social/publish-facebook', requireAuth, requireAdmin, express.json(), async (req, res) => {
-  try {
-    const project = getProject(Number(req.params.id));
-    if (!project) return res.status(404).json({ error: 'project not found' });
+// Build the per-platform post text from generated copy — matches the
+// "copy" buttons in the UI: Facebook + Instagram append hashtags,
+// LinkedIn does not.
+function buildContent(platform, posts) {
+  const tags = (posts.hashtags || []).map(h => '#' + h).join(' ');
+  if (platform === 'linkedin') return posts.linkedin;
+  const base = platform === 'instagram' ? posts.instagram : posts.facebook;
+  return base + (tags ? '\n\n' + tags : '');
+}
 
-    let { content, photoUrls } = req.body || {};
-    if (!content) {
-      const posts = await generateSocialPosts(project);
-      const tags = (posts.hashtags || []).map(h => '#' + h).join(' ');
-      content = posts.facebook + (tags ? '\n\n' + tags : '');
-    }
+// One route per platform. The client sends the final `content` string
+// (as the admin edited it) + chosen public photo URLs; falls back to
+// freshly generated copy when `content` is omitted (server-side caller).
+function makePublishRoute(platform, publishFn, envHint) {
+  return async (req, res) => {
+    try {
+      const project = getProject(Number(req.params.id));
+      if (!project) return res.status(404).json({ error: 'project not found' });
 
-    const result = await publishToFacebook(content, Array.isArray(photoUrls) ? photoUrls : []);
-    if (result.skipped) {
-      return res.status(400).json({ error: 'Zernio is not configured on the server (set ZERNIO_API_KEY + ZERNIO_ACCOUNT_ID).' });
+      let { content, photoUrls } = req.body || {};
+      if (!content) {
+        const posts = await generateSocialPosts(project);
+        content = buildContent(platform, posts);
+      }
+
+      const result = await publishFn(content, Array.isArray(photoUrls) ? photoUrls : []);
+      if (result.skipped) {
+        return res.status(400).json({ error: `Zernio ${platform} is not configured on the server (${envHint}).` });
+      }
+      if (!result.ok) return res.status(502).json({ error: result.error });
+      res.json({ ok: true, id: result.id });
+    } catch (err) {
+      console.error(`[social] publish-${platform} failed:`, err);
+      res.status(500).json({ error: err.message });
     }
-    if (!result.ok) return res.status(502).json({ error: result.error });
-    res.json({ ok: true, id: result.id });
-  } catch (err) {
-    console.error('[social] publish-facebook failed:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+  };
+}
+
+router.post('/projects/:id/social/publish-facebook',  requireAuth, requireAdmin, express.json(),
+  makePublishRoute('facebook',  publishToFacebook,  'set ZERNIO_API_KEY + ZERNIO_ACCOUNT_ID'));
+router.post('/projects/:id/social/publish-instagram', requireAuth, requireAdmin, express.json(),
+  makePublishRoute('instagram', publishToInstagram, 'set ZERNIO_INSTAGRAM_ACCOUNT_ID'));
+router.post('/projects/:id/social/publish-linkedin',  requireAuth, requireAdmin, express.json(),
+  makePublishRoute('linkedin',  publishToLinkedIn,  'set ZERNIO_LINKEDIN_ACCOUNT_ID'));
 
 export default router;

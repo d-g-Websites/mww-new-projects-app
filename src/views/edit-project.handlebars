@@ -1,0 +1,145 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 4px;flex-wrap:wrap;gap:10px;">
+  <h2 style="margin:0;">Edit project</h2>
+  <a class="btn btn-outline" href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank" rel="noopener" style="padding:8px 14px;font-size:13px;">View live →</a>
+</div>
+<p class="muted" style="font-size:13px;">{{project.service_label}} — {{project.city_name}}, IL · Slug: <code>{{project.slug}}</code></p>
+<p class="muted" style="font-size:12px;">Published {{project.published_at}}. Slug / service / city / date are locked — to change them, delete and recreate.</p>
+
+<div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;">
+  <form method="post" action="/projects/{{project.id}}/regenerate-narrative" style="margin:0;">
+    <button type="submit" class="btn btn-outline" style="font-size:14px;padding:9px 16px;">⟳ Regenerate narrative</button>
+  </form>
+  <form method="post" action="/projects/{{project.id}}/regenerate-faq" style="margin:0;">
+    <button type="submit" class="btn btn-outline" style="font-size:14px;padding:9px 16px;">⟳ Regenerate FAQ</button>
+  </form>
+  <a class="btn btn-outline" href="/projects/{{project.id}}/social" style="font-size:14px;padding:9px 16px;">📣 Create social post</a>
+</div>
+<p class="muted" style="font-size:12px;">Regenerate buttons immediately rewrite the live page with the new AI output.</p>
+
+<form method="post" action="/projects/{{project.id}}/edit" enctype="multipart/form-data">
+
+  <div class="card">
+    <h2>Narrative</h2>
+    <textarea name="narrative" rows="14" style="font-family:inherit;">{{project.narrative}}</textarea>
+  </div>
+
+  <div class="card">
+    <h2>Customer review</h2>
+    <div class="field">
+      <label for="customer_name">Customer name</label>
+      <input id="customer_name" name="customer_name" value="{{project.customer_name}}">
+    </div>
+    <div class="field">
+      <label for="review_url">Review link (Google or Yelp)</label>
+      <input id="review_url" name="review_url" type="url" value="{{project.review_url}}">
+    </div>
+    <div class="field">
+      <label for="review_text">Review text</label>
+      <textarea id="review_text" name="review_text" rows="5">{{project.review_text}}</textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Photos</h2>
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Replace before/after by uploading a new file. Leave blank to keep the current photo.</p>
+    <div class="field">
+      <label for="before">Before photo</label>
+      <input id="before" name="before" type="file" accept="image/*">
+      <div class="photo-preview">
+        <img src="https://www.mywindowwashing.com/projects/img/{{project.slug}}-before.webp" alt="Current before photo">
+        <span class="existing-tag">Currently live</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="after">After photo</label>
+      <input id="after" name="after" type="file" accept="image/*">
+      <div class="photo-preview">
+        <img src="https://www.mywindowwashing.com/projects/img/{{project.slug}}-after.webp" alt="Current after photo">
+        <span class="existing-tag">Currently live</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Gallery photos <small style="font-weight:400;color:#8a9db0;">({{gallery.length}} of 5 used)</small></h2>
+    {{#if gallery.length}}
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Current gallery. Existing photos can't be swapped here — add new ones below, or delete + recreate the project to start the gallery over.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
+      {{#each gallery}}
+      <div>
+        <img src="{{url}}" alt="Gallery photo {{n}}" style="width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;border:1px solid #e0e8f0;background:#f5f8fa;">
+        <span class="existing-tag" style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#8a9db0;text-transform:uppercase;">Photo {{n}}</span>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{#if openSlots.length}}
+    <p style="font-size:13px;color:#8a9db0;margin:0 0 12px;">Add up to {{openSlots.length}} more. The first gallery photo is the page's hero image; new ones land at the end.</p>
+    {{#each openSlots}}
+    <div class="field">
+      <label for="extra-new-{{this}}">Add photo {{this}}</label>
+      <input id="extra-new-{{this}}" name="extras" type="file" accept="image/*">
+      <div class="photo-preview"></div>
+    </div>
+    {{/each}}
+    {{else}}
+    <p class="muted" style="margin:0;">All 5 gallery slots are used.</p>
+    {{/if}}
+  </div>
+
+  <div class="card">
+    <h2>Video</h2>
+    <div class="field">
+      <label for="video_url">Video URL (YouTube or Vimeo)</label>
+      <input id="video_url" name="video_url" type="url" value="{{project.video_url}}" placeholder="https://youtu.be/…">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Details</h2>
+    <div class="field">
+      <label for="home_type">Home type</label>
+      <input id="home_type" name="home_type" value="{{project.home_type}}">
+    </div>
+    <div class="field">
+      <label for="price">Price</label>
+      <input id="price" name="price" value="{{project.price}}">
+    </div>
+    <div class="field">
+      <label for="street">Street name</label>
+      <input id="street" name="street" value="{{project.street}}">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bullet notes</h2>
+    <p class="muted" style="font-size:13px;margin:-8px 0 8px;">These are the inputs that feed narrative regeneration. Edit + regenerate to get a different narrative.</p>
+    <textarea name="bullet_facts" rows="6" style="font-family:inherit;">{{project.bullet_facts}}</textarea>
+  </div>
+
+  {{#if challengeChoices.length}}
+  <div class="card">
+    <h2>Challenges</h2>
+    <p class="muted" style="font-size:13px;margin:-8px 0 8px;">Check the ones to include when regenerating the narrative.</p>
+    <div class="check-grid">
+      {{#each challengeChoices}}
+      <label class="check-row">
+        <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../project.extras.challenges label)}}checked{{/if}}>
+        <span>{{label}}</span>
+      </label>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  <button type="submit" class="btn btn-block">Save changes &amp; update live site</button>
+</form>
+
+<form method="post" action="/projects/{{project.id}}/delete" style="margin-top:14px;"
+      onsubmit="return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row. cPanel still needs a deploy click to remove it from the live site. This cannot be undone — proceed?');">
+  <button type="submit" class="btn btn-block" style="background:#c62828;color:#fff;border:none;">
+    Delete project from website
+  </button>
+</form>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>

@@ -1,0 +1,15 @@
+<div class="alert alert-success">
+  <strong>Published.</strong> Commit <code>{{result.git.sha}}</code> {{#if result.pushed}}pushed to origin.{{else}}NOT pushed (SITE_REPO_PUSH=false).{{/if}}
+</div>
+
+<div class="card">
+  <h2>{{project.service_label}} — {{project.city_name}}, IL</h2>
+  <p>Live URL (after cPanel pulls): <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">/projects/{{project.slug}}</a></p>
+  <ul class="list">
+    <li>Wrote <code>{{result.projectPath}}</code></li>
+    <li>{{#if result.spoke.skipped}}Spoke page not patched ({{result.spoke.reason}}){{else}}Patched spoke page <code>{{project.city_slug}}.html</code>{{/if}}</li>
+    <li>Sitemap entry added at <code>{{result.sitemapDate}}</code></li>
+  </ul>
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;">Back to dashboard</a>

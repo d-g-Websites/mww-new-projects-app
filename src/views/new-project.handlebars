@@ -1,0 +1,290 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 16px;">
+  <h2 style="margin:0;">{{service.label}}</h2>
+  <a href="/new" class="muted" style="font-size:13px;">change</a>
+</div>
+{{#if collision}}<div class="alert">{{collision.message}}</div>{{/if}}
+{{#if errorBanner}}<div class="alert">{{errorBanner}}</div>{{/if}}
+
+<form method="post" action="/new" enctype="multipart/form-data" id="project-form">
+  <input type="hidden" name="service" value="{{service.value}}">
+
+  {{#if showPostAs}}
+  <div class="card" style="border-color:#ffb74d;background:#fff8e1;">
+    <h2 style="color:#7a4400;">Submitting on behalf of <small style="color:#c62828;">(required)</small></h2>
+    <p class="muted" style="margin:-8px 0 10px;font-size:13px;">As an admin you don't post under your own name. Pick the tech who did this job — they'll be credited on the project page and in the dashboard list.</p>
+    <div class="field" style="margin-bottom:0;">
+      <label for="post_as">Tech</label>
+      <select id="post_as" name="post_as" required>
+        <option value="">— Choose a team member —</option>
+        {{#each techChoices}}
+        <option value="{{id}}" {{#if (eq (concat ../formValues.post_as "") (concat id ""))}}selected{{/if}}>{{display_name}}{{#if (eq role "admin")}} (admin){{/if}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </div>
+  {{/if}}
+
+  <div class="card">
+    <h2>1. Address</h2>
+    <div class="field">
+      <label for="address-search">Job address</label>
+      <input id="address-search" type="text" placeholder="Start typing the customer's address…" autocomplete="off" required>
+      <small id="address-help">We'll pull the city automatically.</small>
+    </div>
+    <div id="address-resolved" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20;padding:10px 12px;border-radius:8px;font-size:14px;margin-top:4px;">
+      <strong id="resolved-line">—</strong>
+    </div>
+    <input type="hidden" name="address"  id="address-formatted" value="{{formValues.address}}">
+    <input type="hidden" name="street"   id="address-street"    value="{{formValues.street}}">
+    <input type="hidden" name="city"     id="address-city"      value="{{formValues.city}}">
+    <input type="hidden" name="state"    id="address-state"     value="{{formValues.state}}">
+    <input type="hidden" name="zip"      id="address-zip"       value="{{formValues.zip}}">
+    <input type="hidden" name="lat"      id="address-lat"       value="{{formValues.lat}}">
+    <input type="hidden" name="lng"      id="address-lng"       value="{{formValues.lng}}">
+    <input type="hidden" name="place_id" id="address-place-id"  value="{{formValues.place_id}}">
+
+    {{#if collision}}
+    <div class="field" style="margin-top:14px;">
+      <label for="descriptor">URL descriptor (slug "{{collision.slug}}" is taken)</label>
+      <input id="descriptor" name="descriptor" value="{{formValues.descriptor}}" autocomplete="off" placeholder="colonial, victorian, etc.">
+    </div>
+    {{else}}
+    <input type="hidden" name="descriptor" value="">
+    {{/if}}
+  </div>
+
+  {{> (lookup . 'detailsPartial')}}
+
+  <div class="card">
+    <h2>3. Photos</h2>
+    <div class="field">
+      <label for="before">Before photo <small style="color:#c62828;">(required)</small></label>
+      <input id="before" name="before" type="file" accept="image/*" required>
+      <div class="photo-preview"></div>
+      <small>Resized to 1200×800 .webp on upload.</small>
+    </div>
+    <div class="field">
+      <label for="after">After photo <small style="color:#c62828;">(required)</small></label>
+      <input id="after" name="after" type="file" accept="image/*" required>
+      <div class="photo-preview"></div>
+    </div>
+
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid #e0e8f0;">
+      <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 4px;">Additional photos <small style="color:#8a9db0;font-weight:400;">(optional, up to 5)</small></p>
+      <p style="font-size:12px;color:#8a9db0;margin:0 0 12px;">The first one becomes the hero image. All show in a "Project Photos" gallery on the published page.</p>
+      <div class="field">
+        <label for="extra-1">Photo 1</label>
+        <input id="extra-1" name="extras" type="file" accept="image/*">
+        <div class="photo-preview"></div>
+      </div>
+      <div class="field">
+        <label for="extra-2">Photo 2</label>
+        <input id="extra-2" name="extras" type="file" accept="image/*">
+        <div class="photo-preview"></div>
+      </div>
+      <div class="field">
+        <label for="extra-3">Photo 3</label>
+        <input id="extra-3" name="extras" type="file" accept="image/*">
+        <div class="photo-preview"></div>
+      </div>
+      <div class="field">
+        <label for="extra-4">Photo 4</label>
+        <input id="extra-4" name="extras" type="file" accept="image/*">
+        <div class="photo-preview"></div>
+      </div>
+      <div class="field">
+        <label for="extra-5">Photo 5</label>
+        <input id="extra-5" name="extras" type="file" accept="image/*">
+        <div class="photo-preview"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid #e0e8f0;">
+      <p style="font-size:14px;color:#133047;font-weight:700;margin:0 0 4px;">Project video <small style="color:#8a9db0;font-weight:400;">(optional)</small></p>
+      <p style="font-size:12px;color:#8a9db0;margin:0 0 12px;">Paste a YouTube or Vimeo link. Upload your clip to YouTube/Vimeo first, then put the share URL here.</p>
+      <div class="field">
+        <label for="video_url">Video URL</label>
+        <input id="video_url" name="video_url" type="url" value="{{formValues.video_url}}"
+               placeholder="https://youtu.be/… or https://vimeo.com/…">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Customer review <small style="color:#8a9db0;font-weight:400;font-size:13px;">(optional — add later)</small></h2>
+    <p style="font-size:13px;color:#8a9db0;margin:-8px 0 12px;">Leave blank if the customer hasn't reviewed yet. You can paste a Google/Yelp link, type the review text below, or both. The link puts a "Read full review" button on the page; the text fills the quoted review card.</p>
+    <div class="field">
+      <label for="customer_name">Customer name</label>
+      <input id="customer_name" name="customer_name" value="{{formValues.customer_name}}" placeholder="e.g. Gregory M.">
+    </div>
+    <div class="field">
+      <label for="review_url">Review link (Google or Yelp)</label>
+      <input id="review_url" name="review_url" type="url" value="{{formValues.review_url}}" placeholder="https://maps.app.goo.gl/… or https://yelp.com/…">
+    </div>
+    <div class="field">
+      <label for="review_text">Review text</label>
+      <textarea id="review_text" name="review_text" rows="5" placeholder="Paste the customer's review here, word-for-word.">{{formValues.review_text}}</textarea>
+      <small>Don't paraphrase. If you paste the text, it shows on the page as a quoted review. Leave blank if you only have the link, or if there's no review yet.</small>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>5. What we did</h2>
+    <div class="field">
+      <label for="bullet_facts">Bullet notes (the AI expands these)</label>
+      <textarea id="bullet_facts" name="bullet_facts" rows="6" placeholder="{{bulletPlaceholder}}">{{formValues.bullet_facts}}</textarea>
+    </div>
+
+    {{#if challengeChoices.length}}
+    <div class="field">
+      <label>Challenges faced on this job <small style="color:#8a9db0;font-weight:400;">(check all that apply)</small></label>
+      <div class="check-grid" id="challenge-grid">
+        {{#each challengeChoices}}
+          {{#if extra}}
+          <label class="check-row {{#if (eq extra.type "number")}}has-count{{else}}has-text{{/if}} {{#if (lookup ../formValues extra.name)}}is-checked{{/if}}">
+            <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../formValues.challenges label)}}checked{{/if}}>
+            <span>{{label}} <small style="color:#8a9db0;">({{extra.prompt}})</small></span>
+            <span class="{{#if (eq extra.type "number")}}count-input{{else}}text-input{{/if}}">
+              <input type="{{extra.type}}" name="{{extra.name}}" placeholder="{{extra.placeholder}}"
+                     value="{{lookup ../formValues extra.name}}"
+                     {{#if (eq extra.type "number")}}min="0" inputmode="numeric"{{/if}}>
+            </span>
+          </label>
+          {{else}}
+          <label class="check-row">
+            <input type="checkbox" name="challenges" value="{{label}}" {{#if (includes ../formValues.challenges label)}}checked{{/if}}>
+            <span>{{label}}</span>
+          </label>
+          {{/if}}
+        {{/each}}
+      </div>
+      <small>The AI weaves these into the second paragraph as the conditions our crew worked through.</small>
+    </div>
+    <script>
+      // Toggle the extra-input show/hide for challenges that have an
+      // associated count or specify field. Same pattern as Section 2.
+      document.querySelectorAll('#challenge-grid .check-row.has-count, #challenge-grid .check-row.has-text').forEach(function (row) {
+        var box = row.querySelector('input[type="checkbox"]');
+        function sync() {
+          row.classList.toggle('is-checked', box.checked);
+          var extra = row.querySelector('.count-input input, .text-input input');
+          if (extra && !box.checked) extra.value = '';
+        }
+        box.addEventListener('change', sync);
+        sync();
+      });
+    </script>
+    {{/if}}
+  </div>
+
+  <button type="submit" class="btn btn-block" id="submit-btn" disabled>Pick an address first</button>
+  <p class="muted" style="margin-top:8px;">Photo upload + AI narrative usually takes 10–20 seconds.</p>
+</form>
+
+{{#if googleMapsKey}}
+<script>
+  // Toggles the submit button + the green "resolved" pill once a real
+  // place is picked. Prevents techs from submitting a freeform string
+  // that we can't extract a city from.
+  function setResolved(addr, city, state, zip) {
+    var pill = document.getElementById('address-resolved');
+    var line = document.getElementById('resolved-line');
+    var btn = document.getElementById('submit-btn');
+    if (addr && city) {
+      pill.style.display = 'block';
+      line.textContent = addr;
+      btn.disabled = false;
+      btn.textContent = 'Generate preview';
+    } else {
+      pill.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Pick an address first';
+    }
+  }
+  function initAutocomplete() {
+    var input = document.getElementById('address-search');
+    var ac = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: 'us' },
+      fields: ['address_components', 'formatted_address', 'place_id', 'geometry'],
+    });
+    ac.addListener('place_changed', function () {
+      var place = ac.getPlace();
+      if (!place.address_components) return;
+      var city = '', state = '', zip = '', street = '';
+      for (var i = 0; i < place.address_components.length; i++) {
+        var c = place.address_components[i];
+        if (c.types.indexOf('route') !== -1) street = c.long_name;
+        else if (c.types.indexOf('locality') !== -1) city = c.long_name;
+        else if (!city && c.types.indexOf('sublocality') !== -1) city = c.long_name;
+        else if (c.types.indexOf('administrative_area_level_1') !== -1) state = c.short_name;
+        else if (c.types.indexOf('postal_code') !== -1) zip = c.long_name;
+      }
+      var lat = '', lng = '';
+      if (place.geometry && place.geometry.location) {
+        lat = place.geometry.location.lat();
+        lng = place.geometry.location.lng();
+      }
+      document.getElementById('address-formatted').value = place.formatted_address || '';
+      document.getElementById('address-street').value = street;
+      document.getElementById('address-city').value = city;
+      document.getElementById('address-state').value = state;
+      document.getElementById('address-zip').value = zip;
+      document.getElementById('address-lat').value = lat;
+      document.getElementById('address-lng').value = lng;
+      document.getElementById('address-place-id').value = place.place_id || '';
+      setResolved(place.formatted_address, city, state, zip);
+    });
+    // If the user retypes after selecting, invalidate the resolved state
+    // so they have to pick from the dropdown again.
+    input.addEventListener('input', function () {
+      if (document.getElementById('address-formatted').value &&
+          input.value !== document.getElementById('address-formatted').value) {
+        document.getElementById('address-formatted').value = '';
+        document.getElementById('address-city').value = '';
+        setResolved('', '');
+      }
+    });
+    // Restore on collision re-render
+    if (document.getElementById('address-formatted').value &&
+        document.getElementById('address-city').value) {
+      input.value = document.getElementById('address-formatted').value;
+      setResolved(
+        document.getElementById('address-formatted').value,
+        document.getElementById('address-city').value
+      );
+    }
+  }
+  window.gm_authFailure = function () {
+    var help = document.getElementById('address-help');
+    if (help) {
+      help.textContent = 'Google Maps could not load — check API key + billing in .env.';
+      help.style.color = '#c62828';
+    }
+  };
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{googleMapsKey}}&libraries=places&callback=initAutocomplete&loading=async"></script>
+{{else}}
+<script>
+  // No API key configured — let the form submit as-is using a manual
+  // city input fallback. This shouldn't happen in production but keeps
+  // dev usable.
+  document.addEventListener('DOMContentLoaded', function () {
+    var help = document.getElementById('address-help');
+    help.innerHTML = 'GOOGLE_MAPS_API_KEY not set — type the city manually below.';
+    help.style.color = '#c62828';
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'Generate preview';
+    // Add a manual city input as a fallback
+    var manual = document.createElement('div');
+    manual.className = 'field';
+    manual.innerHTML = '<label for="manual-city">City (manual)</label><input id="manual-city" placeholder="e.g. Northbrook">';
+    document.getElementById('address-help').parentNode.appendChild(manual);
+    document.getElementById('manual-city').addEventListener('input', function (e) {
+      document.getElementById('address-city').value = e.target.value;
+      document.getElementById('address-formatted').value = document.getElementById('address-search').value;
+    });
+  });
+</script>
+{{/if}}

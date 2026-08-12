@@ -1,0 +1,54 @@
+<h2 style="margin:0 0 16px;">Choose a service</h2>
+<p class="muted" style="margin:0 0 20px;">Tap the service this job is for.</p>
+
+<div class="service-grid">
+  {{#each services}}
+  <a class="service-card" href="/new/details?service={{value}}">
+    <div class="service-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{{iconSvg}}}</svg>
+    </div>
+    <div class="service-label">{{label}}</div>
+  </a>
+  {{/each}}
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:8px;">Cancel</a>
+
+<style>
+.service-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 20px; }
+.service-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #fff;
+  border: 2px solid #e0e8f0;
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-decoration: none;
+  color: #133047;
+  transition: border-color .15s, box-shadow .15s, transform .12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.service-card:hover, .service-card:active {
+  border-color: #4caf50;
+  box-shadow: 0 6px 20px rgba(76,175,80,.18);
+  transform: translateY(-1px);
+}
+.service-icon {
+  width: 56px; height: 56px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #133047;
+  color: #4caf50;
+  display: flex; align-items: center; justify-content: center;
+}
+.service-icon svg { width: 28px; height: 28px; }
+.service-label { font-size: 19px; font-weight: 700; }
+
+@media (min-width: 600px) {
+  .service-grid { grid-template-columns: repeat(3, 1fr); }
+  .service-card { flex-direction: column; text-align: center; padding: 28px 16px; }
+  .service-icon { width: 64px; height: 64px; }
+  .service-icon svg { width: 32px; height: 32px; }
+}
+</style>

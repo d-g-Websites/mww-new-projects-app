@@ -1,0 +1,253 @@
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+  <h2 style="margin:0;">📣 Create a social post</h2>
+  <a class="btn btn-outline" href="{{pageUrl}}" target="_blank" style="padding:8px 14px;font-size:13px;">View live →</a>
+</div>
+<p class="muted" style="margin:0 0 16px;">{{project.service_label}} — {{project.city_name}}, IL · <code>/{{project.slug}}</code></p>
+
+<div class="card" id="loading-card">
+  <p style="margin:0;text-align:center;font-size:15px;">✨ Writing captions for Facebook, Instagram, and LinkedIn…</p>
+</div>
+
+<div id="error-card" style="display:none;">
+  <div class="alert" id="error-msg"></div>
+  <button type="button" class="btn btn-outline btn-block" id="retry-btn">Try again</button>
+</div>
+
+<div id="content" style="display:none;">
+
+  <div class="card">
+    <h2>1. Pick photos</h2>
+    <p class="muted" style="margin:-8px 0 12px;font-size:13px;">Tap the photos you want to share — pick one or several (before + after make the strongest post). These get attached to every platform you post to. Instagram needs at least one.</p>
+    <div id="photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+      {{#each photos}}
+      <label class="photo-pick">
+        <input type="checkbox" name="photo" value="{{url}}" {{#if defaultPick}}checked{{/if}}>
+        <img src="{{url}}" alt="{{label}}" loading="lazy">
+        <span>{{label}}</span>
+      </label>
+      {{/each}}
+    </div>
+    <p class="muted" id="photo-count" style="font-size:12px;margin:10px 0 0;"></p>
+    <button type="button" class="btn btn-outline" id="dl-all-btn" style="font-size:12px;padding:6px 12px;margin-top:10px;">⬇ Download all photos (JPG)</button>
+  </div>
+
+  <div class="card">
+    <h2>2. Hashtags</h2>
+    <p class="muted" style="margin:-8px 0 8px;font-size:13px;">Used for Facebook + Instagram (LinkedIn skips them). Edit freely.</p>
+    <textarea id="hashtags" rows="3" style="font-family:inherit;font-size:14px;"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>3. Post it</h2>
+    <p class="muted" style="margin:-8px 0 12px;font-size:13px;">One click publishes to all three at once. Or scroll down to review each caption and post them individually.</p>
+    <button type="button" class="btn btn-block" id="post-all-btn"
+      style="background:linear-gradient(90deg,#1877f2,#c13584,#0a66c2);color:#fff;font-size:16px;font-weight:700;padding:16px;border:none;">
+      🚀 Post to Facebook, Instagram &amp; LinkedIn
+    </button>
+    <p class="muted" id="post-all-status" style="font-size:13px;margin:12px 0 0;line-height:1.7;"></p>
+  </div>
+
+  <div class="card platform-card" data-platform="facebook">
+    <h2>📘 Facebook</h2>
+    <textarea class="caption" rows="5" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="fb-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <button type="button" class="btn btn-block publish-btn" data-platform="facebook" style="background:#1877f2;color:#fff;">🚀 Post to Facebook</button>
+  </div>
+
+  <div class="card platform-card" data-platform="instagram">
+    <h2>📸 Instagram</h2>
+    <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="ig-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <button type="button" class="btn btn-block publish-btn" data-platform="instagram" style="background:#c13584;color:#fff;">🚀 Post to Instagram</button>
+  </div>
+
+  <div class="card platform-card" data-platform="linkedin">
+    <h2>💼 LinkedIn</h2>
+    <textarea class="caption" rows="6" style="font-family:inherit;font-size:14px;"></textarea>
+    <p class="muted" id="li-count" style="font-size:12px;margin:4px 0 12px;text-align:right;"></p>
+    <button type="button" class="btn btn-block publish-btn" data-platform="linkedin" style="background:#0a66c2;color:#fff;">🚀 Post to LinkedIn</button>
+  </div>
+
+  <button type="button" class="btn btn-outline btn-block" id="regen-btn" style="margin-top:14px;">⟳ Regenerate all captions</button>
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>
+
+<style>
+.photo-pick { position:relative; cursor:pointer; display:block; border:3px solid transparent; border-radius:8px; overflow:hidden; }
+.photo-pick input { position:absolute; opacity:0; }
+.photo-pick img { display:block; width:100%; aspect-ratio:3/2; object-fit:cover; background:#f5f8fa; }
+.photo-pick span { display:block; padding:6px 8px; font-size:12px; font-weight:600; background:#fff; }
+.photo-pick:has(input:checked) { border-color:#4caf50; }
+.photo-pick:has(input:checked) span { background:#e8f5e9; color:#2e7d32; }
+</style>
+
+<script>
+(function () {
+  var projectId = {{project.id}};
+  var pageUrl   = {{{json pageUrl}}};
+  var loadCard  = document.getElementById('loading-card');
+  var content   = document.getElementById('content');
+  var errCard   = document.getElementById('error-card');
+  var errMsg    = document.getElementById('error-msg');
+  var hashEl    = document.getElementById('hashtags');
+  var photoCount = document.getElementById('photo-count');
+  var counters  = { facebook: 'fb-count', instagram: 'ig-count', linkedin: 'li-count' };
+  var limits    = { facebook: 63206, instagram: 2200, linkedin: 3000 };
+
+  function el(platform) {
+    return document.querySelector('.platform-card[data-platform="' + platform + '"] .caption');
+  }
+  function pickedPhotos() {
+    return Array.prototype.map.call(
+      document.querySelectorAll('input[name="photo"]:checked'),
+      function (i) { return i.value; }
+    );
+  }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function refreshPhotoCount() {
+    var n = pickedPhotos().length;
+    photoCount.textContent = n === 0
+      ? 'No photos selected — pick at least one (Instagram requires one).'
+      : n + ' photo' + (n === 1 ? '' : 's') + ' selected.';
+    photoCount.style.color = n === 0 ? '#c62828' : '';
+  }
+  function refreshCounter(platform) {
+    var c = document.getElementById(counters[platform]);
+    var n = el(platform).value.length + (platform === 'linkedin' ? 0 : hashEl.value.length + 2);
+    c.textContent = n + ' / ' + limits[platform] + ' characters';
+    c.style.color = n > limits[platform] ? '#c62828' : '';
+  }
+  function refreshAllCounters() { ['facebook','instagram','linkedin'].forEach(refreshCounter); }
+
+  // Per-platform post text — Facebook/Instagram append hashtags, LinkedIn doesn't.
+  function contentFor(platform) {
+    var body = el(platform).value;
+    return (platform === 'linkedin') ? body : (body + '\n\n' + hashEl.value);
+  }
+
+  // POST one platform to the server (which relays to Zernio). Resolves
+  // to { platform, ok, error } — never rejects, so batch posting can
+  // report per-platform outcomes.
+  function publishOne(platform, urls) {
+    if (platform === 'instagram' && urls.length === 0) {
+      return Promise.resolve({ platform: platform, ok: false, error: 'needs a photo — skipped' });
+    }
+    return fetch('/projects/' + projectId + '/social/publish-' + platform, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: contentFor(platform), photoUrls: urls })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { platform: platform, ok: r.ok, error: d.error }; }); })
+      .catch(function (e) { return { platform: platform, ok: false, error: e.message }; });
+  }
+
+  function load() {
+    loadCard.style.display = 'block';
+    content.style.display = 'none';
+    errCard.style.display = 'none';
+    fetch('/projects/' + projectId + '/social/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) throw new Error(data.error);
+        el('facebook').value  = data.facebook;
+        el('instagram').value = data.instagram;
+        el('linkedin').value  = data.linkedin;
+        hashEl.value = (data.hashtags || []).map(function (t) { return '#' + t; }).join(' ');
+        loadCard.style.display = 'none';
+        content.style.display = 'block';
+        refreshPhotoCount();
+        refreshAllCounters();
+      })
+      .catch(function (err) {
+        loadCard.style.display = 'none';
+        errCard.style.display = 'block';
+        errMsg.textContent = 'Couldn’t generate captions: ' + err.message;
+      });
+  }
+
+  document.getElementById('retry-btn').addEventListener('click', load);
+  document.getElementById('regen-btn').addEventListener('click', load);
+  document.getElementById('photo-grid').addEventListener('change', refreshPhotoCount);
+  ['facebook','instagram','linkedin'].forEach(function (p) {
+    el(p).addEventListener('input', function () { refreshCounter(p); });
+  });
+  hashEl.addEventListener('input', refreshAllCounters);
+
+  // Individual "Post to <platform>" buttons.
+  document.querySelectorAll('.publish-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var platform = btn.dataset.platform;
+      var urls = pickedPhotos();
+      if (platform === 'instagram' && urls.length === 0) {
+        alert('Instagram needs at least one photo — pick a before/after above first.');
+        return;
+      }
+      var original = btn.dataset.label || btn.textContent;
+      btn.dataset.label = original;
+      btn.disabled = true;
+      btn.textContent = '⏳ Posting…';
+      publishOne(platform, urls).then(function (res) {
+        if (res.ok) {
+          btn.textContent = '✅ Posted';
+          btn.style.background = '#2e7d32';
+        } else {
+          btn.disabled = false;
+          btn.textContent = original;
+          alert(cap(platform) + ' post failed: ' + res.error);
+        }
+      });
+    });
+  });
+
+  // "Download all photos" — saves every project photo as JPG via the
+  // same-origin proxy (so the download attribute works and you get real
+  // JPG files, not webp). Staggered so the browser allows the batch.
+  document.getElementById('dl-all-btn').addEventListener('click', function () {
+    var inputs = document.querySelectorAll('#photo-grid input[name="photo"]');
+    if (inputs.length === 0) return;
+    Array.prototype.forEach.call(inputs, function (inp, i) {
+      var m = String(inp.value).match(/\/([A-Za-z0-9_-]+)\.webp/i);
+      var name = m ? m[1] : ('photo-' + (i + 1));
+      setTimeout(function () {
+        var a = document.createElement('a');
+        a.href = location.origin + '/media/jpg/' + name + '.jpg';
+        a.download = name + '.jpg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, i * 400);
+    });
+  });
+
+  // Master "Post to all three" button.
+  var postAllBtn = document.getElementById('post-all-btn');
+  var postAllStatus = document.getElementById('post-all-status');
+  postAllBtn.addEventListener('click', function () {
+    var urls = pickedPhotos();
+    var original = postAllBtn.dataset.label || postAllBtn.textContent;
+    postAllBtn.dataset.label = original;
+    postAllBtn.disabled = true;
+    postAllBtn.textContent = '⏳ Posting to all…';
+    postAllStatus.textContent = '';
+    Promise.all(['facebook','instagram','linkedin'].map(function (p) {
+      return publishOne(p, urls);
+    })).then(function (results) {
+      var okCount = results.filter(function (r) { return r.ok; }).length;
+      postAllStatus.innerHTML = results.map(function (r) {
+        return (r.ok ? '✅ ' : '❌ ') + cap(r.platform) + (r.ok ? ' posted' : ' — ' + r.error);
+      }).join('<br>');
+      if (okCount === 3) {
+        postAllBtn.textContent = '✅ Posted to all three';
+        postAllBtn.style.background = '#2e7d32';
+      } else {
+        postAllBtn.disabled = false;
+        postAllBtn.textContent = okCount + '/3 posted — tap to retry';
+      }
+    });
+  });
+
+  load();
+})();
+</script>

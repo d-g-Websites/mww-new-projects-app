@@ -1,0 +1,171 @@
+<div class="card">
+  <h2>Submit a completed job</h2>
+  <p class="muted">Photos, address, customer review. Takes about 2 minutes.</p>
+  <a class="btn btn-block" href="/new" style="text-align:center;">+ New project</a>
+  <a class="btn btn-outline btn-block" href="/videos" style="text-align:center;margin-top:10px;">🎬 Upload a video to YouTube</a>
+  <a class="btn btn-outline btn-block" href="/review-qr" style="text-align:center;margin-top:10px;">⭐ Ask for a Google review</a>
+</div>
+
+{{#if drafts.length}}
+<div class="card">
+  <h2>Your drafts <span style="background:#e3f2fd;color:#0d47a1;padding:2px 10px;border-radius:20px;font-size:13px;margin-left:6px;">{{drafts.length}}</span></h2>
+  <p class="muted" style="margin:-8px 0 12px;">Unfinished projects — pick one up where you left off, or delete it.</p>
+  <ul class="list pending-list">
+    {{#each drafts}}
+    <li>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div>
+          <strong>{{service_label}} — {{city_name}}, IL</strong>
+          <div class="muted" style="font-size:13px;">Slug: <code>{{slug}}</code></div>
+          <div class="muted" style="font-size:12px;">Started {{created_at}}</div>
+        </div>
+        <div class="pending-actions">
+          <a class="btn" href="/projects/{{id}}/preview">Resume</a>
+          <form method="post" action="/projects/{{id}}/delete" style="display:inline;"
+                onsubmit="return confirm('Delete this draft? You’ll have to start over.');">
+            <button type="submit" class="btn btn-outline" style="color:#c62828;border-color:#ef9a9a;">Discard</button>
+          </form>
+        </div>
+      </div>
+    </li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
+<div class="card">
+  <h2>Pending approval {{#if pending.length}}<span style="background:#fff8e1;color:#7a5400;padding:2px 10px;border-radius:20px;font-size:13px;margin-left:6px;">{{pending.length}}</span>{{/if}}</h2>
+  {{#if pending.length}}
+  <ul class="list pending-list">
+    {{#each pending}}
+    <li>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div>
+          <strong>{{service_label}} — {{city_name}}, IL</strong>
+          <div class="muted" style="font-size:13px;">Hub: {{hub}} · Slug: <code>{{slug}}</code></div>
+          <div class="muted" style="font-size:12px;">Submitted {{created_at}}{{#if submitted_by_name}} by {{submitted_by_name}}{{/if}}</div>
+        </div>
+        <div class="pending-actions">
+          <a class="btn btn-outline" href="/projects/{{id}}/preview">Preview / Edit</a>
+          {{#if (eq @root.currentUser.role "admin")}}
+          <form method="post" action="/projects/{{id}}/publish" style="display:inline;">
+            <button type="submit" class="btn">Publish</button>
+          </form>
+          <form method="post" action="/projects/{{id}}/delete" style="display:inline;"
+                onsubmit="return confirm('Delete this project? This cannot be undone.');">
+            <button type="submit" class="btn btn-outline" style="color:#c62828;border-color:#ef9a9a;">Delete</button>
+          </form>
+          {{/if}}
+        </div>
+      </div>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="muted">Nothing waiting. New tech submissions will show up here.</p>
+  {{/if}}
+</div>
+
+<div class="card">
+  <h2>Recently published</h2>
+
+  {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
+  <form method="get" action="/" id="pub-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;">
+    <select name="pay" onchange="document.getElementById('pub-filters').submit()"
+            style="width:auto;padding:8px 10px;font-size:14px;">
+      <option value="">Paid + unpaid</option>
+      <option value="unpaid" {{#if (eq payFilter "unpaid")}}selected{{/if}}>Unpaid only</option>
+      <option value="paid"   {{#if (eq payFilter "paid")}}selected{{/if}}>Paid only</option>
+    </select>
+    <select name="tech" onchange="document.getElementById('pub-filters').submit()"
+            style="width:auto;padding:8px 10px;font-size:14px;">
+      <option value="">All technicians</option>
+      {{#each techChoices}}
+      <option value="{{id}}" {{#if (eq id ../techFilter)}}selected{{/if}}>{{display_name}}</option>
+      {{/each}}
+    </select>
+    {{#if filtersActive}}
+    <a href="/" class="muted" style="font-size:13px;">✕ Clear filters</a>
+    {{/if}}
+  </form>
+  {{/if}}{{/if}}
+  {{#if recent.length}}
+  <ul class="list">
+    {{#each recent}}
+    <li class="pub-row {{#if (eq pay_status "paid")}}pub-paid{{else}}pub-unpaid{{/if}}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <strong>{{service_label}} — {{city_name}}, IL</strong>
+          <div class="muted" style="font-size:13px;">
+            <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank">/{{slug}}</a> · {{published_at}}
+          </div>
+          {{#if submitted_by_name}}<div class="muted" style="font-size:12px;">Submitted by {{submitted_by_name}}</div>{{/if}}
+          <div style="margin-top:6px;">
+            {{#if (eq pay_status "paid")}}
+            <span class="pay-badge pay-badge-paid">✓ Paid{{#if pay_amount}} — ${{pay_amount}}{{/if}}</span>
+            {{else}}
+            <span class="pay-badge pay-badge-unpaid">Unpaid{{#if pay_amount}} — ${{pay_amount}} pending{{/if}}</span>
+            {{/if}}
+          </div>
+        </div>
+        {{#if @root.currentUser}}{{#if (eq @root.currentUser.role "admin")}}
+        <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
+          <form method="post" action="/projects/{{id}}/pay" style="margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <input type="hidden" name="page" value="{{#if @root.pagination}}{{@root.pagination.page}}{{else}}1{{/if}}">
+            <input type="hidden" name="pay" value="{{@root.payFilter}}">
+            <input type="hidden" name="tech" value="{{@root.techFilter}}">
+            <span style="font-size:14px;color:#475569;">$</span>
+            <input name="amount" type="number" step="1" min="0" value="{{pay_amount_display}}"
+                   title="{{#if pay_amount_is_suggested}}Suggested from the payment tiers — save to lock in{{else}}Saved amount{{/if}}"
+                   style="width:72px;padding:7px 8px;font-size:14px;{{#if pay_amount_is_suggested}}color:#8a9db0;font-style:italic;{{/if}}">
+            <button type="submit" name="do" value="save" class="btn btn-outline" style="padding:7px 12px;font-size:13px;">Save</button>
+            <button type="submit" name="do" value="toggle" class="btn" style="padding:7px 12px;font-size:13px;{{#if (eq pay_status "paid")}}background:#c62828;{{else}}background:#2e7d32;{{/if}}">
+              {{#if (eq pay_status "paid")}}Mark unpaid{{else}}Mark paid{{/if}}
+            </button>
+          </form>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <a class="btn btn-outline" href="/projects/{{id}}/social" style="padding:8px 14px;font-size:13px;">📣 Social</a>
+            <a class="btn btn-outline" href="/projects/{{id}}/edit" style="padding:8px 14px;font-size:13px;">Edit</a>
+            <form method="post" action="/projects/{{id}}/delete" style="margin:0;"
+                  onsubmit="return confirm('Delete this published project? This removes the live page, photos, spoke-page tile, sitemap entry, and DB row. cPanel still needs a deploy to remove it from the live site. Cannot be undone — proceed?');">
+              <button type="submit" class="btn" style="padding:8px 14px;font-size:13px;background:#c62828;color:#fff;border:none;">Delete</button>
+            </form>
+          </div>
+        </div>
+        {{/if}}{{/if}}
+      </div>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="muted">{{#if filtersActive}}Nothing matches these filters.{{else}}No projects published yet.{{/if}}</p>
+  {{/if}}
+
+  {{#if pagination}}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+    {{#if pagination.prev}}
+    <a class="btn btn-outline" href="/?page={{pagination.prev}}{{#if filterQs}}&{{filterQs}}{{/if}}" style="padding:9px 16px;font-size:14px;">← Newer</a>
+    {{else}}
+    <span></span>
+    {{/if}}
+    <span class="muted" style="font-size:13px;">{{pagination.from}}–{{pagination.to}} of {{pagination.total}} · page {{pagination.page}} / {{pagination.pages}}</span>
+    {{#if pagination.next}}
+    <a class="btn btn-outline" href="/?page={{pagination.next}}{{#if filterQs}}&{{filterQs}}{{/if}}" style="padding:9px 16px;font-size:14px;">Older →</a>
+    {{else}}
+    <span></span>
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+
+<style>
+.pending-list li { padding: 14px 0; }
+.pending-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pending-actions .btn { padding: 8px 14px; font-size: 14px; }
+.pub-row { border-radius: 10px; padding: 12px !important; margin-bottom: 8px; border: 1px solid transparent !important; }
+.pub-unpaid { background: #ffebee; border-color: #ffcdd2 !important; }
+.pub-paid { background: #e8f5e9; border-color: #c8e6c9 !important; }
+.pay-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.pay-badge-unpaid { background: #ffcdd2; color: #b71c1c; }
+.pay-badge-paid { background: #c8e6c9; color: #1b5e20; }
+</style>

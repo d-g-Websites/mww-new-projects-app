@@ -1,0 +1,332 @@
+import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { writeProjectPage } from '../lib/render.js';
+import { updateSpokePage, unpublishFromSpoke } from '../lib/spoke-update.js';
+import { updateSitemap, updateSitemapArchives, removeFromSitemap } from '../lib/sitemap.js';
+import { commitAndPush, syncSiteRepo } from '../lib/git.js';
+import {
+  markPublished, getProject, deleteProject,
+  listPublishedBySpoke, listPublishedByService, listPublishedAll,
+} from '../lib/db.js';
+import { writeAffectedArchives, currentArchiveUrls } from '../lib/archive.js';
+import { unlinkSync, existsSync as fsExistsSync } from 'node:fs';
+import { generateSocialPosts } from '../lib/social-post.js';
+import { publishToFacebook } from '../lib/zernio.js';
+
+// Optional: auto-post a new project to Facebook via Zernio right after
+// it's published. Off unless ZERNIO_AUTOPOST_ON_PUBLISH=true so the
+// default flow stays the manual "Post to Facebook now" button. Never
+// throws — a Zernio hiccup must not fail a publish.
+async function maybeAutoPostFacebook(project) {
+  if (process.env.ZERNIO_AUTOPOST_ON_PUBLISH !== 'true') return;
+  try {
+    const posts = await generateSocialPosts(project);
+    const tags  = (posts.hashtags || []).map(h => '#' + h).join(' ');
+    const base  = `https://www.mywindowwashing.com/projects/img/${project.slug}`;
+    const content = posts.facebook + (tags ? `\n\n${tags}` : '');
+    const result = await publishToFacebook(content, [`${base}-before.webp`, `${base}-after.webp`]);
+    if (result.ok) console.log('[publish] auto-posted to Facebook:', result.id);
+    else if (!result.skipped) console.error('[publish] facebook auto-post failed:', result.error);
+  } catch (e) {
+    console.error('[publish] facebook auto-post error (non-fatal):', e.message);
+  }
+}
+
+// Run the four side-effects in order:
+//   1. Write projects/<slug>.html
+//   2. Move staged before/after webps into projects/img/
+//   3. Patch the matching spoke page (tile + footer)
+//   4. Patch sitemap.xml
+//   5. Commit + push to the deploy branch
+// Then flip the DB row to status=published.
+export async function publishProject(project) {
+  const siteRepo = process.env.SITE_REPO_PATH;
+  const branch   = process.env.SITE_REPO_BRANCH || 'master';
+  const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
+  if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  // 0. Sync the local clone to origin so spoke + sitemap patches are
+  //    based on the latest published state, not whatever's been
+  //    sitting on the VPS since last publish.
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
+
+  const imgDir = join(siteRepo, 'projects', 'img');
+  mkdirSync(imgDir, { recursive: true });
+
+  // 1. Render and write the project HTML.
+  const projectPath = writeProjectPage(siteRepo, project);
+
+  // 2. Copy the resized webps into projects/img/.
+  const beforeDest = join(imgDir, `${project.slug}-before.webp`);
+  const afterDest  = join(imgDir, `${project.slug}-after.webp`);
+  if (project.before_photo && existsSync(project.before_photo)) {
+    copyFileSync(project.before_photo, beforeDest);
+  }
+  if (project.after_photo && existsSync(project.after_photo)) {
+    copyFileSync(project.after_photo, afterDest);
+  }
+
+  // Plus any optional gallery photos. Stored as an array of staged
+  // paths; copy each to projects/img/ under the same basename.
+  const extraDests = [];
+  const extraPaths = Array.isArray(project.extra_photos) ? project.extra_photos : [];
+  for (const p of extraPaths) {
+    if (p && existsSync(p)) {
+      const dest = join(imgDir, basename(p));
+      copyFileSync(p, dest);
+      extraDests.push(dest);
+    }
+  }
+
+  // 3. Mark published in DB BEFORE archive regeneration so the new
+  //    project is included in listPublishedAll() / -BySpoke() / -ByService()
+  //    queries that the archive pages build from. Slight ordering wart
+  //    (we mark published before the git push completes), but the
+  //    push itself is idempotent — if it fails we revert below.
+  markPublished(project.id);
+
+  // 4. Patch the matching spoke page. spoke_slug is what
+  //    resolveCityFromLocality picked as the nearest spoke — equals
+  //    city_slug when the city is itself a spoke, but differs when
+  //    the city has no spoke page (e.g. Romeoville → Lemont). Fall
+  //    back to city_slug for drafts created before spoke_slug existed.
+  const spokeToPatch = project.spoke_slug || project.city_slug;
+  const freshProject = getProject(project.id);
+  // Count of published projects for this spoke — used to build the
+  // "View all N completed projects in [City] →" footer link on the
+  // spoke's Recent Projects section.
+  const spokeProjectCount = listPublishedBySpoke(spokeToPatch).length;
+  const spokeResult = updateSpokePage(siteRepo, spokeToPatch, freshProject, {
+    projectCount: spokeProjectCount,
+  });
+  const spokePath = join(siteRepo, `${spokeToPatch}.html`);
+
+  // 5. Regenerate the master + service + spoke archive pages so the
+  //    new project shows up everywhere it belongs and the oldest
+  //    truncated from the spoke tile grid still has a home.
+  const archivePaths = writeAffectedArchives(siteRepo, freshProject);
+
+  // 6. Patch sitemap.xml — both the new project's URL and the
+  //    archive URLs (some of which may be new this publish).
+  const today = new Date().toISOString().slice(0, 10);
+  updateSitemap(siteRepo, project, today);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  const sitemapPath = join(siteRepo, 'sitemap.xml');
+
+  // 7. Stage and commit. Paths are relative to the repo root for git.
+  const files = [
+    relTo(siteRepo, projectPath),
+    relTo(siteRepo, beforeDest),
+    relTo(siteRepo, afterDest),
+    relTo(siteRepo, sitemapPath),
+    ...extraDests.map(d => relTo(siteRepo, d)),
+    ...archivePaths.map(p => relTo(siteRepo, p)),
+  ];
+  if (!spokeResult.skipped) files.push(relTo(siteRepo, spokePath));
+
+  const message = `Add project: ${project.slug}`;
+  const git = await commitAndPush({
+    siteRepoPath: siteRepo,
+    branch,
+    files,
+    message,
+    push: pushFlag,
+  });
+
+  // Optionally announce the new project on Facebook (no-op unless
+  // ZERNIO_AUTOPOST_ON_PUBLISH=true). Awaited but self-contained: it
+  // swallows its own errors so a failure here never breaks publish.
+  await maybeAutoPostFacebook(freshProject);
+
+  return {
+    projectPath:  basename(projectPath),
+    spoke:        spokeResult,
+    archives:     archivePaths.map(p => basename(p)),
+    sitemapDate:  today,
+    git,
+    pushed:       pushFlag,
+  };
+}
+
+function relTo(repo, abs) {
+  return abs.startsWith(repo) ? abs.slice(repo.length + 1) : abs;
+}
+
+// Re-render + re-publish an already-published project after an admin
+// edit. Same pipeline as publishProject minus two things:
+//   - no spoke-page tile patch (tile is already there from the
+//     original publish; re-patching would prepend a duplicate)
+//   - no markPublished (status is already 'published' and we want to
+//     preserve the original published_at)
+// Newly uploaded photos (passed as { before, after, extras } absolute
+// paths) get copied over the existing files at the same filenames.
+export async function republishProject(project, { replacedPhotos = {} } = {}) {
+  const siteRepo = process.env.SITE_REPO_PATH;
+  const branch   = process.env.SITE_REPO_BRANCH || 'master';
+  const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
+  if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
+
+  // Re-render the project HTML — picks up every edited field.
+  const projectPath = writeProjectPage(siteRepo, project);
+
+  // Copy any replacement photos over the live ones. Unchanged photo
+  // slots stay as-is in the static site repo.
+  const imgDir = join(siteRepo, 'projects', 'img');
+  mkdirSync(imgDir, { recursive: true });
+  const touchedPhotos = [];
+  if (replacedPhotos.before && existsSync(replacedPhotos.before)) {
+    const dest = join(imgDir, `${project.slug}-before.webp`);
+    copyFileSync(replacedPhotos.before, dest);
+    touchedPhotos.push(dest);
+  }
+  if (replacedPhotos.after && existsSync(replacedPhotos.after)) {
+    const dest = join(imgDir, `${project.slug}-after.webp`);
+    copyFileSync(replacedPhotos.after, dest);
+    touchedPhotos.push(dest);
+  }
+  // Newly added / replaced gallery photos — already staged with their
+  // final `<slug>-extra-<n>.webp` filenames, so a straight copy keeps
+  // the numbering the template + schema expect.
+  for (const src of replacedPhotos.extras || []) {
+    if (!existsSync(src)) continue;
+    const dest = join(imgDir, basename(src));
+    copyFileSync(src, dest);
+    touchedPhotos.push(dest);
+  }
+
+  // Regenerate archives that reference this project's content (the
+  // hero card thumb + title might have changed; price + service-type
+  // updates flow into the archive cards' meta too).
+  const archivePaths = writeAffectedArchives(siteRepo, project);
+
+  // Refresh the sitemap lastmod for this project + archive URLs.
+  const today = new Date().toISOString().slice(0, 10);
+  updateSitemap(siteRepo, project, today);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  const sitemapPath = join(siteRepo, 'sitemap.xml');
+
+  const files = [
+    relTo(siteRepo, projectPath),
+    relTo(siteRepo, sitemapPath),
+    ...touchedPhotos.map(p => relTo(siteRepo, p)),
+    ...archivePaths.map(p => relTo(siteRepo, p)),
+  ];
+
+  const git = await commitAndPush({
+    siteRepoPath: siteRepo,
+    branch,
+    files,
+    message: `Edit project: ${project.slug}`,
+    push: pushFlag,
+  });
+
+  return { projectPath: basename(projectPath), archives: archivePaths.map(p => basename(p)), git, pushed: pushFlag };
+}
+
+// Reverse of publishProject — used when an admin deletes a
+// published project from the dashboard. Removes the project HTML,
+// its photos, the spoke-page tile + footer link, the sitemap entry,
+// and the DB row. Regenerates the master + service + spoke archive
+// pages without this project. Single commit + push so cPanel's next
+// deploy reflects the deletion.
+export async function unpublishProject(project) {
+  const siteRepo = process.env.SITE_REPO_PATH;
+  const branch   = process.env.SITE_REPO_BRANCH || 'master';
+  const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
+  if (!siteRepo) throw new Error('SITE_REPO_PATH is not set');
+
+  await syncSiteRepo({ siteRepoPath: siteRepo, branch });
+
+  const removedFiles = [];
+
+  // 1. Delete the project HTML.
+  const projectPath = join(siteRepo, 'projects', `${project.slug}.html`);
+  if (fsExistsSync(projectPath)) {
+    unlinkSync(projectPath);
+    removedFiles.push(relTo(siteRepo, projectPath));
+  }
+
+  // 2. Delete photos (before, after, up to 5 extras).
+  const imgDir = join(siteRepo, 'projects', 'img');
+  const photoNames = [
+    `${project.slug}-before.webp`,
+    `${project.slug}-after.webp`,
+    `${project.slug}-extra-1.webp`,
+    `${project.slug}-extra-2.webp`,
+    `${project.slug}-extra-3.webp`,
+    `${project.slug}-extra-4.webp`,
+    `${project.slug}-extra-5.webp`,
+  ];
+  for (const name of photoNames) {
+    const p = join(imgDir, name);
+    if (fsExistsSync(p)) {
+      unlinkSync(p);
+      removedFiles.push(relTo(siteRepo, p));
+    }
+  }
+
+  // 3. Delete from DB BEFORE we regenerate archives — the archives
+  //    query listPublishedBy* and we want them to exclude this row.
+  const spokeSlug = project.spoke_slug || project.city_slug;
+  deleteProject(project.id);
+
+  // 4. Patch the spoke page: remove the tile + footer link, refresh
+  //    the 'View all N projects' count.
+  const newSpokeCount = listPublishedBySpoke(spokeSlug).length;
+  const spokeResult = unpublishFromSpoke(siteRepo, spokeSlug, project.slug, newSpokeCount);
+  const spokePath = join(siteRepo, `${spokeSlug}.html`);
+
+  // 5. Regenerate archives without this project. Each generator
+  //    returns null when there's nothing left to list — if any
+  //    archive ends up empty, delete its file so we're not left
+  //    with stale empty pages.
+  const archivePaths = writeAffectedArchives(siteRepo, project);
+
+  const emptyChecks = [
+    { file: 'index.html',             count: listPublishedAll().length },
+    { file: `${project.service}.html`, count: listPublishedByService(project.service).length },
+    { file: `${spokeSlug}.html`,       count: newSpokeCount },
+  ];
+  for (const { file, count } of emptyChecks) {
+    if (count === 0) {
+      const full = join(siteRepo, 'projects', file);
+      if (fsExistsSync(full)) {
+        unlinkSync(full);
+        removedFiles.push(relTo(siteRepo, full));
+      }
+    }
+  }
+
+  // 6. Strip the project URL from sitemap.xml and refresh archive lastmods.
+  removeFromSitemap(siteRepo, project);
+  const today = new Date().toISOString().slice(0, 10);
+  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  const sitemapPath = join(siteRepo, 'sitemap.xml');
+
+  // 7. Stage everything for the commit. removedFiles for deletes,
+  //    spoke + sitemap + archive paths for modifications.
+  const files = [
+    ...removedFiles,                              // deletions
+    relTo(siteRepo, sitemapPath),                 // modified
+    ...archivePaths.map(p => relTo(siteRepo, p)), // possibly modified, possibly deleted
+  ];
+  if (!spokeResult.skipped) files.push(relTo(siteRepo, spokePath));
+
+  const git = await commitAndPush({
+    siteRepoPath: siteRepo,
+    branch,
+    files,
+    message: `Delete project: ${project.slug}`,
+    push: pushFlag,
+  });
+
+  return {
+    removed: removedFiles.length,
+    spoke: spokeResult,
+    archives: archivePaths.map(p => basename(p)),
+    git,
+    pushed: pushFlag,
+  };
+}

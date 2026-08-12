@@ -1,0 +1,34 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 16px;">
+  <h2 style="margin:0;">Team</h2>
+  <a class="btn" href="/users/new">+ Add user</a>
+</div>
+
+<div class="card">
+  {{#if users.length}}
+  <ul class="list">
+    {{#each users}}
+    <li style="display:flex;align-items:center;gap:14px;padding:14px 0;">
+      {{#if photo_filename}}
+      <img src="https://www.mywindowwashing.com/images/team/{{photo_filename}}"
+           alt="{{display_name}}"
+           style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+      {{else}}
+      <div style="width:48px;height:48px;border-radius:50%;background:#133047;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">
+        {{#with display_name}}{{this.[0]}}{{/with}}
+      </div>
+      {{/if}}
+      <div style="flex:1;min-width:0;">
+        <strong>{{display_name}}</strong>
+        <span class="muted" style="margin-left:8px;font-size:12px;background:#e0e8f0;color:#133047;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.3px;">{{role}}</span>
+        <div class="muted" style="font-size:13px;">@{{username}}</div>
+      </div>
+      <a class="btn btn-outline" href="/users/{{id}}/edit" style="padding:8px 14px;font-size:14px;">Edit</a>
+    </li>
+    {{/each}}
+  </ul>
+  {{else}}
+  <p class="muted">No users yet — add the first one.</p>
+  {{/if}}
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;">Back to dashboard</a>

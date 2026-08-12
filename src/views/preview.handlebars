@@ -1,0 +1,72 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;">
+  <h2 style="margin:0;">Review</h2>
+  <span class="muted" style="font-size:13px;">Status: <strong>{{project.status}}</strong></span>
+</div>
+<p class="muted">URL: <code>/projects/{{project.slug}}</code></p>
+
+<div class="card">
+  <h2>Narrative — edit if needed</h2>
+  {{#if narrativeFailed}}
+  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:12px;">
+    <strong>Narrative didn't generate automatically.</strong> Click <em>Regenerate narrative</em> to retry, or just type the two paragraphs you want and hit <em>Save narrative</em>.
+  </div>
+  <form method="post" action="/projects/{{project.id}}/regenerate-narrative" style="margin-bottom:12px;">
+    <button type="submit" class="btn">Regenerate narrative</button>
+  </form>
+  {{/if}}
+  <form method="post" action="/projects/{{project.id}}/narrative">
+    <textarea name="narrative" rows="14" style="font-family:inherit;">{{project.narrative}}</textarea>
+    <button type="submit" class="btn btn-outline" style="margin-top:10px;">Save narrative</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>FAQ <small style="color:#8a9db0;font-weight:400;font-size:13px;">({{project.faq.length}} {{#if (eq project.faq.length 1)}}question{{else}}questions{{/if}})</small></h2>
+  {{#if faqEmpty}}
+  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:12px;">
+    <strong>FAQ didn't generate.</strong> Click below to retry, or publish without it — the section will just be hidden on the live page.
+  </div>
+  {{else}}
+  <ul class="list" style="font-size:14px;">
+    {{#each project.faq}}<li><strong>{{q}}</strong><br><span class="muted" style="font-size:13px;">{{a}}</span></li>{{/each}}
+  </ul>
+  {{/if}}
+  <form method="post" action="/projects/{{project.id}}/regenerate-faq" style="margin-top:10px;">
+    <button type="submit" class="btn btn-outline">Regenerate FAQ</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Preview the page</h2>
+  <iframe src="/projects/{{project.id}}/preview/iframe" style="width:100%;height:600px;border:1px solid #cfd8dc;border-radius:8px;"></iframe>
+  <p class="muted" style="margin-top:8px;">Photos will 404 in this preview — they're not on the live site yet. They'll appear once the project is published.</p>
+</div>
+
+{{#if (eq project.status 'draft')}}
+<form method="post" action="/projects/{{project.id}}/save">
+  <button type="submit" class="btn btn-block">Save &amp; submit for approval</button>
+</form>
+<p class="muted" style="margin-top:8px;">This locks in the project and notifies the admin via Telegram. The admin then reviews and publishes from the dashboard.</p>
+{{else if (eq project.status 'pending')}}
+{{#if (eq currentUser.role "admin")}}
+<div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
+  <strong>Awaiting admin approval.</strong> Use the buttons below to publish or delete.
+</div>
+<form method="post" action="/projects/{{project.id}}/publish" style="margin-bottom:10px;">
+  <button type="submit" class="btn btn-block">Publish to mywindowwashing.com</button>
+</form>
+<form method="post" action="/projects/{{project.id}}/delete"
+      onsubmit="return confirm('Permanently delete this project?');">
+  <button type="submit" class="btn btn-outline btn-block" style="color:#c62828;border-color:#ef9a9a;">Delete project</button>
+</form>
+{{else}}
+<div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
+  <strong>Submitted — awaiting admin approval.</strong> The office has been notified and will review and publish it. You can still fix the narrative or review text above while it waits.
+</div>
+{{/if}}
+{{else}}
+<div class="alert alert-success">Already published. <a href="https://www.mywindowwashing.com/projects/{{project.slug}}" target="_blank">View live</a></div>
+{{#if currentUser}}{{#if (eq currentUser.role "admin")}}
+<a class="btn btn-block" href="/projects/{{project.id}}/edit" style="text-align:center;">Edit project</a>
+{{/if}}{{/if}}
+{{/if}}

@@ -1,0 +1,29 @@
+<h2 style="margin:0 0 4px;">⚙️ Hub review URLs</h2>
+<p class="muted" style="margin:0 0 16px;">One URL per hub. The QR code on the Ask-for-Review page sends customers to whichever URL you paste here.</p>
+
+{{#if notice}}<div class="alert alert-success">{{notice}}</div>{{/if}}
+
+<div class="card" style="background:#f5f8fa;">
+  <p style="margin:0 0 8px;font-size:14px;font-weight:700;">Where do I get these URLs?</p>
+  <ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.7;color:#475569;">
+    <li>Open <a href="https://business.google.com/" target="_blank">business.google.com</a> and pick the hub.</li>
+    <li>Click <strong>Read reviews</strong> → <strong>Get more reviews</strong>.</li>
+    <li>Copy the short link Google shows (it looks like <code>https://g.page/r/&lt;code&gt;/review</code>).</li>
+    <li>Paste it below and Save.</li>
+  </ol>
+</div>
+
+<form method="post" action="/review-qr/setup">
+  {{#each hubs}}
+  <div class="card">
+    <div class="field" style="margin-bottom:0;">
+      <label for="url_{{key}}">{{name}}{{#if city}} <small style="color:#8a9db0;font-weight:400;">— {{city}}</small>{{/if}}</label>
+      <input id="url_{{key}}" name="url_{{key}}" type="url" value="{{url}}"
+             placeholder="https://g.page/r/…/review">
+    </div>
+  </div>
+  {{/each}}
+  <button type="submit" class="btn btn-block">Save all</button>
+</form>
+
+<a class="btn btn-outline btn-block" href="/review-qr" style="text-align:center;margin-top:14px;">Back to Ask for review</a>

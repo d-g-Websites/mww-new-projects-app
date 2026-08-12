@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{title}}MWW Dashboard</title>
+
+<!-- PWA: makes the dashboard installable as an app-like icon on
+     phone home screens. iOS Safari uses the apple-touch-icon +
+     apple-mobile-web-app-* meta tags; Android Chrome + everything
+     else reads manifest.json. -->
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#133047">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MWW">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f8fa; color: #133047; }
+header {
+  background: #133047;
+  color: #fff;
+  /* iOS PWA: when the dashboard runs standalone the status bar /
+     notch / Dynamic Island sits on top of the page. env(safe-area-
+     inset-top) is the device's reported height for that zone — 0 on
+     desktops + Android, ~44-59px on iPhones depending on model. Add
+     it to the base 14px so the header content always sits below. */
+  padding: calc(env(safe-area-inset-top, 0px) + 14px)
+           max(16px, env(safe-area-inset-right, 16px))
+           14px
+           max(16px, env(safe-area-inset-left, 16px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header h1 { margin: 0; font-size: 18px; font-weight: 700; }
+header a, header form button { color: #fff; background: none; border: none; font-size: 14px; text-decoration: none; cursor: pointer; }
+main { max-width: 720px; margin: 0 auto; padding: 16px; }
+.btn { display: inline-block; background: #4caf50; color: #fff; border: none; padding: 14px 22px; border-radius: 8px; font-size: 16px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.btn:hover { background: #388e3c; }
+.btn-outline { background: #fff; color: #133047; border: 2px solid #133047; }
+.btn-block { display: block; width: 100%; }
+.card { background: #fff; border: 1px solid #e0e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.card h2 { margin: 0 0 12px; font-size: 16px; }
+label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #133047; }
+input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #cfd8dc; border-radius: 8px; font-family: inherit; background: #fff; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #4caf50; outline-offset: 0; border-color: #4caf50; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row > div { display: flex; flex-direction: column; }
+.field { margin-bottom: 16px; }
+.field small { display: block; color: #8a9db0; font-size: 12px; margin-top: 4px; }
+.alert { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+.alert-success { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+.check-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f5f8fa; border: 1px solid #e0e8f0; border-radius: 8px; font-size: 15px; cursor: pointer; }
+.check-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4caf50; cursor: pointer; flex-shrink: 0; }
+.check-row.has-count, .check-row.has-text, .check-row.has-subs { flex-wrap: wrap; }
+.check-row .count-input, .check-row .text-input { flex-basis: 100%; display: none; margin-top: 8px; padding-left: 30px; }
+.check-row .count-input input { width: 120px; padding: 8px 10px; font-size: 15px; border: 1px solid #cfd8dc; border-radius: 6px; background: #fff; }
+.check-row .text-input input { width: 100%; padding: 8px 10px; font-size: 15px; border: 1px solid #cfd8dc; border-radius: 6px; background: #fff; }
+.check-row.is-checked .count-input, .check-row.is-checked .text-input { display: block; }
+/* Parent checkbox + sub-grid pattern: like .has-count but the
+   "extra" is a list of nested checkboxes shown when the parent is
+   checked. The outer container is a div so its label only wraps the
+   parent checkbox; sub-rows have their own labels. */
+.check-row.has-subs { display: flex; flex-direction: column; align-items: stretch; cursor: default; padding: 10px 12px; }
+.check-row.has-subs .check-row-main { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.check-row.has-subs .sub-grid { display: none; flex-direction: column; gap: 6px; margin-top: 10px; padding-left: 30px; }
+.check-row.has-subs.is-checked .sub-grid { display: flex; }
+.sub-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #595959; cursor: pointer; padding: 4px 0; }
+.sub-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4caf50; }
+.sub-field { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #595959; padding: 4px 0 8px; border-bottom: 1px dashed #e0e8f0; margin-bottom: 6px; }
+.sub-field label { margin: 0; }
+.sub-field select { width: auto; padding: 6px 10px; font-size: 14px; border: 1px solid #cfd8dc; border-radius: 6px; background: #fff; }
+
+/* Photo previews — shown immediately after file selection so the
+   tech can verify they picked the right shot. */
+.photo-preview { margin-top: 8px; }
+.photo-preview img { display: block; width: 100%; max-width: 240px; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e8f0; background: #f5f8fa; }
+.photo-preview .heic-note { display: inline-flex; align-items: center; gap: 8px; padding: 12px 14px; background: #fff3e0; border: 1px solid #ffcc80; color: #7a4400; border-radius: 8px; font-size: 13px; line-height: 1.5; max-width: 320px; }
+.photo-preview .existing-tag { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; color: #8a9db0; text-transform: uppercase; letter-spacing: .4px; }
+.list { list-style: none; padding: 0; margin: 0; }
+.list li { padding: 12px 0; border-bottom: 1px solid #e0e8f0; }
+.list li:last-child { border: none; }
+.muted { color: #8a9db0; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/" style="font-weight:700;">MWW Dashboard</a>
+  <div style="display:flex;gap:14px;align-items:center;font-size:13px;">
+    {{#if currentUser}}
+    <span style="color:rgba(255,255,255,.7);">Hi, {{currentUser.display_name}}</span>
+    <a href="/pay-structure">Pay</a>
+    <a href="/review-qr">Review</a>
+    <a href="/videos">Videos</a>
+    {{#if (eq currentUser.role "admin")}}<a href="/users">Team</a>{{/if}}
+    {{/if}}
+    <form method="post" action="/logout" style="margin:0;"><button type="submit">Log out</button></form>
+  </div>
+</header>
+<main>
+{{{body}}}
+</main>
+<script>
+  // Live thumbnail previews for any image-file input on the page.
+  // Looks for a sibling .photo-preview div inside the input's .field
+  // wrapper. iPhone HEIC files render as a friendly note instead of
+  // a broken <img> since browsers can't decode HEIC inline.
+  (function () {
+    function isHeic(file) {
+      return /heic|heif/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '');
+    }
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); }
+    document.querySelectorAll('input[type="file"]').forEach(function (input) {
+      if (input.accept && input.accept.indexOf('image') === -1) return;
+      var preview = input.parentNode && input.parentNode.querySelector('.photo-preview');
+      if (!preview) return;
+      input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) { preview.innerHTML = ''; return; }
+        if (isHeic(file)) {
+          preview.innerHTML = '<div class="heic-note">📷 <strong>' + esc(file.name) + '</strong><br>Apple HEIC format — we\'ll convert it to a web-friendly photo on upload. (No inline preview available.)</div>';
+          return;
+        }
+        var url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="preview">';
+      });
+    });
+  })();
+</script>
+</body>
+</html>

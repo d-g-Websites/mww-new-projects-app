@@ -1,0 +1,62 @@
+<h2 style="margin:0 0 16px;">
+  {{#if (eq mode "new")}}Add user{{else}}Edit {{user.display_name}}{{/if}}
+</h2>
+
+{{#if error}}<div class="alert">{{error}}</div>{{/if}}
+
+<form method="post" action="{{#if (eq mode "new")}}/users/new{{else}}/users/{{user.id}}{{/if}}" enctype="multipart/form-data">
+  <div class="card">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" value="{{user.username}}"
+             {{#if (eq mode "edit")}}readonly{{else}}required{{/if}}
+             autocapitalize="off" autocomplete="off"
+             placeholder="lowercase, e.g. mike">
+      <small>Used for login. Lowercase letters, digits, hyphens, underscores. Can't be changed later.</small>
+    </div>
+    <div class="field">
+      <label for="display_name">Display name</label>
+      <input id="display_name" name="display_name" type="text" value="{{user.display_name}}" required placeholder="e.g. Mike Johnson">
+      <small>Shown on project pages and inside the dashboard.</small>
+    </div>
+    <div class="field">
+      <label for="role">Role</label>
+      <select id="role" name="role">
+        <option value="tech"  {{#unless (eq user.role "admin")}}selected{{/unless}}>Tech (submit projects only)</option>
+        <option value="admin" {{#if (eq user.role "admin")}}selected{{/if}}>Admin (publish, edit, manage users)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="password">{{#if (eq mode "new")}}Password{{else}}New password (leave blank to keep current){{/if}}</label>
+      <input id="password" name="password" type="password" autocomplete="new-password"
+             {{#if (eq mode "new")}}required{{/if}} placeholder="at least 8 characters">
+    </div>
+    <div class="field">
+      <label for="bio">Short bio (optional)</label>
+      <textarea id="bio" name="bio" rows="3" placeholder="e.g. 5 years on the Lisle crew, lead on rooftop and ladder work.">{{user.bio}}</textarea>
+      <small>Optional. Shown on the project page next to the tech's name.</small>
+    </div>
+    <div class="field">
+      <label for="photo">Photo {{#if user.photo_filename}}(currently uploaded){{else}}(optional){{/if}}</label>
+      <input id="photo" name="photo" type="file" accept="image/*">
+      <div class="photo-preview">
+        {{#if user.photo_filename}}
+          <img src="https://www.mywindowwashing.com/images/team/{{user.photo_filename}}" alt="Current photo">
+          <span class="existing-tag">Currently live</span>
+        {{/if}}
+      </div>
+      <small>Resized to 600×600 .webp and pushed to the live site at <code>images/team/&lt;username&gt;.webp</code>.</small>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-block">{{#if (eq mode "new")}}Create user{{else}}Save changes{{/if}}</button>
+</form>
+
+{{#if (eq mode "edit")}}
+<form method="post" action="/users/{{user.id}}/delete" style="margin-top:14px;"
+      onsubmit="return confirm('Delete this user? Their submitted projects will be kept but unattributed.');">
+  <button type="submit" class="btn btn-outline btn-block" style="color:#c62828;border-color:#ef9a9a;">Delete user</button>
+</form>
+{{/if}}
+
+<a class="btn btn-outline btn-block" href="/users" style="text-align:center;margin-top:10px;">Back to team</a>

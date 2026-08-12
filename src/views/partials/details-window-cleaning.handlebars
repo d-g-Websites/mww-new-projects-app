@@ -1,0 +1,98 @@
+<div class="card">
+  <h2>2. Details</h2>
+
+  <div class="field">
+    <label for="home_type">Home type</label>
+    <select id="home_type" name="home_type" required>
+      <option value="">Select…</option>
+      <option value="1-Story House"  {{#if (eq formValues.home_type "1-Story House")}}selected{{/if}}>1-story house</option>
+      <option value="2-Story House"  {{#if (eq formValues.home_type "2-Story House")}}selected{{/if}}>2-story house</option>
+      <option value="3-Story House"  {{#if (eq formValues.home_type "3-Story House")}}selected{{/if}}>3-story house</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="metric_value">How many windows cleaned?</label>
+    <input id="metric_value" name="metric_value" type="number" min="1" inputmode="numeric"
+           value="{{formValues.metric_value}}" placeholder="24" required>
+  </div>
+  <input type="hidden" name="metric_label" value="Windows Cleaned">
+
+  <div class="field">
+    <label for="service_type">Service type</label>
+    <select id="service_type" name="service_type" required>
+      <option value="">Select…</option>
+      <option value="In &amp; Out" {{#if (eq formValues.service_type "In & Out")}}selected{{/if}}>In &amp; Out</option>
+      <option value="Out Only"    {{#if (eq formValues.service_type "Out Only")}}selected{{/if}}>Out only</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Window type (check all that apply)</label>
+    <div class="check-grid">
+      <label class="check-row">
+        <input type="checkbox" name="window_types" value="French Style"   {{#if (includes formValues.window_types "French Style")}}checked{{/if}}>
+        <span>French style windows</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="window_types" value="Double Hung"    {{#if (includes formValues.window_types "Double Hung")}}checked{{/if}}>
+        <span>Double-hung windows</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="window_types" value="Casement"       {{#if (includes formValues.window_types "Casement")}}checked{{/if}}>
+        <span>Casement windows</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Extras (check what was included, then enter count)</label>
+    <div class="check-grid">
+      {{> extra-count-checkbox name="screens"        label="Screens"        formValues=formValues}}
+      {{> extra-count-checkbox name="storm_windows"  label="Storm windows"  formValues=formValues}}
+      {{> extra-count-checkbox name="skylights"      label="Skylights"      formValues=formValues}}
+      {{> extra-count-checkbox name="window_wells"   label="Window wells"   formValues=formValues}}
+
+      <label class="check-row">
+        <input type="checkbox" name="tracks_frames" value="yes" {{#if formValues.tracks_frames}}checked{{/if}}>
+        <span>Tracks &amp; frames</span>
+      </label>
+
+      <label class="check-row has-text {{#if formValues.extras_other}}is-checked{{/if}}">
+        <input type="checkbox" name="extras_other" value="yes" {{#if formValues.extras_other}}checked{{/if}}>
+        <span>Other</span>
+        <span class="text-input">
+          <input type="text" name="extras_other_detail" placeholder="Describe what else was done"
+                 value="{{formValues.extras_other_detail}}">
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="price">Price</label>
+    <input id="price" name="price" value="{{formValues.price}}" placeholder="$290">
+  </div>
+
+  <div class="field">
+    <label for="review_date">Date completed</label>
+    <input id="review_date" name="review_date" type="date"
+           value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
+  </div>
+</div>
+
+<script>
+  // Toggle the per-row extra input (count or free-text) next to each
+  // checkbox-with-extra. .has-count shows a number field, .has-text
+  // shows a description field.
+  document.querySelectorAll('.check-row.has-count, .check-row.has-text').forEach(function (row) {
+    var box = row.querySelector('input[type="checkbox"]');
+    function sync() {
+      row.classList.toggle('is-checked', box.checked);
+      var inner = row.querySelector('.count-input input, .text-input input');
+      if (inner && !box.checked) inner.value = '';
+    }
+    box.addEventListener('change', sync);
+    sync();
+  });
+</script>

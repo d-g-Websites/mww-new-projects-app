@@ -1,0 +1,136 @@
+<div class="card">
+  <h2>2. Details</h2>
+
+  <div class="field">
+    <label>What was cleaned? <small style="color:#8a9db0;font-weight:400;">(check all that apply)</small></label>
+    <div class="check-grid">
+
+      {{!-- House — with story count + material sub-checkboxes --}}
+      <div class="check-row has-subs {{#if formValues.surface_house}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_house" value="yes" {{#if formValues.surface_house}}checked{{/if}}>
+          <span>House</span>
+        </label>
+        <div class="sub-grid">
+          <div class="sub-field">
+            <label>Stories:</label>
+            <select name="house_stories">
+              <option value="">Select…</option>
+              <option value="1" {{#if (eq formValues.house_stories "1")}}selected{{/if}}>1 story</option>
+              <option value="2" {{#if (eq formValues.house_stories "2")}}selected{{/if}}>2 story</option>
+              <option value="3" {{#if (eq formValues.house_stories "3")}}selected{{/if}}>3 story</option>
+            </select>
+          </div>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Vinyl Siding"   {{#if (includes formValues.house_materials "Vinyl Siding")}}checked{{/if}}><span>Vinyl siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Wood Siding"    {{#if (includes formValues.house_materials "Wood Siding")}}checked{{/if}}><span>Wood siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Aluminum Siding"{{#if (includes formValues.house_materials "Aluminum Siding")}}checked{{/if}}><span>Aluminum siding</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Brick"          {{#if (includes formValues.house_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="house_materials" value="Stone"          {{#if (includes formValues.house_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
+      {{!-- Deck --}}
+      <div class="check-row has-subs {{#if formValues.surface_deck}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_deck" value="yes" {{#if formValues.surface_deck}}checked{{/if}}>
+          <span>Deck</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="deck_materials" value="Wood"            {{#if (includes formValues.deck_materials "Wood")}}checked{{/if}}><span>Wood</span></label>
+          <label class="sub-check"><input type="checkbox" name="deck_materials" value="Engineered TREX" {{#if (includes formValues.deck_materials "Engineered TREX")}}checked{{/if}}><span>Engineered TREX</span></label>
+        </div>
+      </div>
+
+      {{!-- Patio --}}
+      <div class="check-row has-subs {{#if formValues.surface_patio}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_patio" value="yes" {{#if formValues.surface_patio}}checked{{/if}}>
+          <span>Patio</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Brick Pavers" {{#if (includes formValues.patio_materials "Brick Pavers")}}checked{{/if}}><span>Brick pavers</span></label>
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Concrete"     {{#if (includes formValues.patio_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="patio_materials" value="Stones"       {{#if (includes formValues.patio_materials "Stones")}}checked{{/if}}><span>Stones</span></label>
+        </div>
+      </div>
+
+      {{!-- Driveway --}}
+      <div class="check-row has-subs {{#if formValues.surface_driveway}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_driveway" value="yes" {{#if formValues.surface_driveway}}checked{{/if}}>
+          <span>Driveway</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Concrete" {{#if (includes formValues.driveway_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Asphalt"  {{#if (includes formValues.driveway_materials "Asphalt")}}checked{{/if}}><span>Asphalt</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Brick"    {{#if (includes formValues.driveway_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="driveway_materials" value="Stone"    {{#if (includes formValues.driveway_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
+      {{!-- Walkways --}}
+      <div class="check-row has-subs {{#if formValues.surface_walkways}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="surface_walkways" value="yes" {{#if formValues.surface_walkways}}checked{{/if}}>
+          <span>Walkways</span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Concrete" {{#if (includes formValues.walkways_materials "Concrete")}}checked{{/if}}><span>Concrete</span></label>
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Brick"    {{#if (includes formValues.walkways_materials "Brick")}}checked{{/if}}><span>Brick</span></label>
+          <label class="sub-check"><input type="checkbox" name="walkways_materials" value="Stone"    {{#if (includes formValues.walkways_materials "Stone")}}checked{{/if}}><span>Stone</span></label>
+        </div>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" name="surface_playset" value="yes" {{#if formValues.surface_playset}}checked{{/if}}>
+        <span>Playset</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="surface_outdoor_furniture" value="yes" {{#if formValues.surface_outdoor_furniture}}checked{{/if}}>
+        <span>Outdoor furniture</span>
+      </label>
+
+      <label class="check-row has-text {{#if formValues.extras_other}}is-checked{{/if}}">
+        <input type="checkbox" name="extras_other" value="yes" {{#if formValues.extras_other}}checked{{/if}}>
+        <span>Other</span>
+        <span class="text-input">
+          <input type="text" name="extras_other_detail" placeholder="Describe what else was washed"
+                 value="{{formValues.extras_other_detail}}">
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="metric_value">Approximate sq footage <small style="color:#8a9db0;font-weight:400;">(optional)</small></label>
+    <input id="metric_value" name="metric_value" type="number" min="0" inputmode="numeric"
+           value="{{formValues.metric_value}}" placeholder="e.g. 2400">
+  </div>
+  <input type="hidden" name="metric_label" value="Sq Ft">
+
+  <div class="field">
+    <label for="price">Price</label>
+    <input id="price" name="price" value="{{formValues.price}}" placeholder="$290">
+  </div>
+
+  <div class="field">
+    <label for="review_date">Date completed</label>
+    <input id="review_date" name="review_date" type="date"
+           value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
+  </div>
+</div>
+
+<script>
+  // Toggle .is-checked on parent rows for .has-count / .has-subs /
+  // .has-text the same way the other partials do.
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs, .check-row.has-text').forEach(function (row) {
+    var box = row.querySelector('input[type="checkbox"]');
+    function sync() {
+      row.classList.toggle('is-checked', box.checked);
+      var inner = row.querySelector('.count-input input, .text-input input');
+      if (inner && !box.checked) inner.value = '';
+    }
+    box.addEventListener('change', sync);
+    sync();
+  });
+</script>

@@ -1,0 +1,107 @@
+<div class="card">
+  <h2>2. Details</h2>
+
+  <div class="field">
+    <label for="home_type">Home type</label>
+    <select id="home_type" name="home_type" required>
+      <option value="">Select…</option>
+      <option value="1-Story House"  {{#if (eq formValues.home_type "1-Story House")}}selected{{/if}}>1-story house</option>
+      <option value="2-Story House"  {{#if (eq formValues.home_type "2-Story House")}}selected{{/if}}>2-story house</option>
+      <option value="3-Story House"  {{#if (eq formValues.home_type "3-Story House")}}selected{{/if}}>3-story house</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="metric_value">Approximate sq footage <small style="color:#8a9db0;font-weight:400;">(optional)</small></label>
+    <input id="metric_value" name="metric_value" type="number" min="0" inputmode="numeric"
+           value="{{formValues.metric_value}}" placeholder="e.g. 2400">
+  </div>
+  <input type="hidden" name="metric_label" value="Sq Ft">
+
+  <div class="field">
+    <label for="service_type">Service type</label>
+    <select id="service_type" name="service_type" required>
+      <option value="">Select…</option>
+      <option value="Cleaning"                  {{#if (eq formValues.service_type "Cleaning")}}selected{{/if}}>Cleaning</option>
+      <option value="Repair"                    {{#if (eq formValues.service_type "Repair")}}selected{{/if}}>Repair</option>
+      <option value="Gutter Guard Installation" {{#if (eq formValues.service_type "Gutter Guard Installation")}}selected{{/if}}>Gutter Guard Installation</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Extras (check all that apply)</label>
+    <div class="check-grid">
+      <label class="check-row">
+        <input type="checkbox" name="gutter_guards" value="yes" {{#if formValues.gutter_guards}}checked{{/if}}>
+        <span>Gutter guards</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="roof_cleaning" value="yes" {{#if formValues.roof_cleaning}}checked{{/if}}>
+        <span>Roof cleaning</span>
+      </label>
+
+      <div class="check-row has-subs {{#if formValues.gutter_repairs}}is-checked{{/if}}">
+        <label class="check-row-main">
+          <input type="checkbox" name="gutter_repairs" value="yes" {{#if formValues.gutter_repairs}}checked{{/if}}>
+          <span>Gutter repairs <small style="color:#8a9db0;font-weight:400;">(check what was done)</small></span>
+        </label>
+        <div class="sub-grid">
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Downspout Reattachment" {{#if (includes formValues.gutter_repair_types "Downspout Reattachment")}}checked{{/if}}><span>Downspout reattachment</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Level Corrections"      {{#if (includes formValues.gutter_repair_types "Level Corrections")}}checked{{/if}}><span>Level corrections</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Elbow Reattachment"     {{#if (includes formValues.gutter_repair_types "Elbow Reattachment")}}checked{{/if}}><span>Elbow reattachment</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Loose Hangers"          {{#if (includes formValues.gutter_repair_types "Loose Hangers")}}checked{{/if}}><span>Loose hangers</span></label>
+          <label class="sub-check"><input type="checkbox" name="gutter_repair_types" value="Leak Repair"            {{#if (includes formValues.gutter_repair_types "Leak Repair")}}checked{{/if}}><span>Leak repair</span></label>
+        </div>
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" name="extra_wide_gutters" value="yes" {{#if formValues.extra_wide_gutters}}checked{{/if}}>
+        <span>Extra wide gutters</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="clogged_elbows" value="yes" {{#if formValues.clogged_elbows}}checked{{/if}}>
+        <span>Clogged elbows</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" name="underground_clogs" value="yes" {{#if formValues.underground_clogs}}checked{{/if}}>
+        <span>Underground clogs</span>
+      </label>
+
+      <label class="check-row has-text {{#if formValues.extras_other}}is-checked{{/if}}">
+        <input type="checkbox" name="extras_other" value="yes" {{#if formValues.extras_other}}checked{{/if}}>
+        <span>Other</span>
+        <span class="text-input">
+          <input type="text" name="extras_other_detail" placeholder="Describe what else was done"
+                 value="{{formValues.extras_other_detail}}">
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="price">Price</label>
+    <input id="price" name="price" value="{{formValues.price}}" placeholder="$290">
+  </div>
+
+  <div class="field">
+    <label for="review_date">Date completed</label>
+    <input id="review_date" name="review_date" type="date"
+           value="{{formValues.review_date}}{{#unless formValues.review_date}}{{today}}{{/unless}}" required>
+  </div>
+</div>
+
+<script>
+  // Same toggle behavior as the window-cleaning partial. Extends the
+  // pattern to .has-subs (parent checkbox reveals a nested grid of
+  // child checkboxes) on top of .has-count.
+  document.querySelectorAll('.check-row.has-count, .check-row.has-subs, .check-row.has-text').forEach(function (row) {
+    var box = row.querySelector('input[type="checkbox"]');
+    function sync() {
+      row.classList.toggle('is-checked', box.checked);
+      var inner = row.querySelector('.count-input input, .text-input input');
+      if (inner && !box.checked) inner.value = '';
+    }
+    box.addEventListener('change', sync);
+    sync();
+  });
+</script>

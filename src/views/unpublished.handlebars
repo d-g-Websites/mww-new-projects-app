@@ -1,0 +1,21 @@
+<div class="alert alert-success">
+  <strong>Deleted.</strong> Commit <code>{{result.git.sha}}</code> {{#if result.pushed}}pushed to origin.{{else}}NOT pushed (SITE_REPO_PUSH=false).{{/if}}
+</div>
+
+<div class="card">
+  <h2>{{project.service_label}} — {{project.city_name}}, IL</h2>
+  <p class="muted">Slug: <code>{{project.slug}}</code></p>
+  <ul class="list" style="font-size:14px;">
+    <li>{{result.removed}} file{{#unless (eq result.removed 1)}}s{{/unless}} removed from the static-site repo (project HTML, photos, possibly empty archive pages)</li>
+    <li>Spoke page <code>{{project.spoke_slug}}{{#unless project.spoke_slug}}{{project.city_slug}}{{/unless}}.html</code> updated (tile + footer link removed{{#if result.spoke.tilesRemoved}}, "View all" count refreshed{{/if}})</li>
+    <li>Sitemap entry removed</li>
+    <li>{{result.archives.length}} archive page{{#unless (eq result.archives.length 1)}}s{{/unless}} regenerated</li>
+    <li>DB row deleted</li>
+  </ul>
+</div>
+
+<div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;">
+  <strong>cPanel needs a deploy.</strong> The page is still live on mywindowwashing.com until you trigger a pull on cPanel. Log in → Git Version Control → <strong>Update from Remote</strong> → <strong>Deploy HEAD Commit</strong>.
+</div>
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;">Back to dashboard</a>

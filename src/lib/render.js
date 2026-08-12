@@ -3,6 +3,7 @@ import { join, basename } from 'node:path';
 import Handlebars from 'handlebars';
 import { getService, getHub, getCity, findNearestCities } from './slug.js';
 import { relatedProjects, listPublished, getUser } from './db.js';
+import { serializeJsonLd } from './json-ld.js';
 
 const TEMPLATE_PATH = join(process.cwd(), 'templates', 'project-page.hbs');
 let TEMPLATE_FN = null;
@@ -252,7 +253,7 @@ function buildSchema(p, service, city, hub) {
     });
   }
 
-  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2);
+  return serializeJsonLd({ '@context': 'https://schema.org', '@graph': graph });
 }
 
 // Detect Google vs Yelp from the URL so the "Read full review" button

@@ -17,6 +17,7 @@ import {
   listServicesWithPublished, listSpokesWithPublished,
 } from './db.js';
 import { SERVICES, getService, getCity, getHub } from './slug.js';
+import { serializeJsonLd } from './json-ld.js';
 
 const SITE_ROOT = 'https://www.mywindowwashing.com';
 
@@ -104,7 +105,7 @@ function buildSchema({ kind, focus, view }) {
       itemListElement: itemList,
     },
   ];
-  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }, null, 2);
+  return serializeJsonLd({ '@context': 'https://schema.org', '@graph': graph });
 }
 
 // Build the view object the archive template expects.

@@ -93,6 +93,20 @@ router.get('/', (req, res) => {
     techFilter ? `tech=${techFilter}` : '',
   ].filter(Boolean).join('&');
 
+  // Outstanding-balance summary for the picked technician: every
+  // unpaid published project they're credited on, valued at the saved
+  // amount or (when none is saved yet) the tier suggestion.
+  let outstanding = null;
+  if (isAdmin && techFilter) {
+    const unpaid = listPublished({ limit: 100000, submittedBy: techFilter, payStatus: 'unpaid' });
+    const techName = listUsers().find(u => u.id === techFilter)?.display_name || 'this tech';
+    outstanding = {
+      count: unpaid.length,
+      total: unpaid.reduce((sum, p) => sum + (p.pay_amount != null ? p.pay_amount : suggestedPay(p)), 0),
+      techName,
+    };
+  }
+
   res.render('index', {
     drafts, pending, recent,
     payFilter,
@@ -100,6 +114,7 @@ router.get('/', (req, res) => {
     techChoices: isAdmin ? listUsers() : [],
     filterQs,
     filtersActive: Boolean(payFilter || techFilter),
+    outstanding,
     pagination: pages > 1 ? {
       page, pages, total,
       prev: page > 1 ? page - 1 : null,
@@ -130,6 +145,24 @@ router.post('/projects/:id/pay', requireAdmin, (req, res) => {
   const techId = parseInt(req.body.tech, 10);
   if (techId) params.push(`tech=${techId}`);
   res.redirect(params.length ? `/?${params.join('&')}` : '/');
+});
+
+// ── Payment tracking (admin): settle every unpaid project for a tech ─
+router.post('/projects/pay-all', requireAdmin, (req, res) => {
+  const techId = parseInt(req.body.tech, 10) || null;
+  if (!techId) return res.status(400).render('error', { message: 'Pick a technician first.' });
+  const unpaid = listPublished({ limit: 100000, submittedBy: techId, payStatus: 'unpaid' });
+  for (const p of unpaid) {
+    updateDraft(p.id, {
+      pay_status: 'paid',
+      // Lock in the amount at settle time so the tech's green badge
+      // shows a number even if no amount was hand-saved beforehand.
+      pay_amount: p.pay_amount != null ? p.pay_amount : suggestedPay(p),
+    });
+  }
+  const params = [`tech=${techId}`];
+  if (['paid', 'unpaid'].includes(req.body.pay)) params.push(`pay=${req.body.pay}`);
+  res.redirect(`/?${params.join('&')}`);
 });
 
 // ── Payment structure reference page (all users) ─────────────────────

@@ -88,6 +88,25 @@
     <a href="/" class="muted" style="font-size:13px;">✕ Clear filters</a>
     {{/if}}
   </form>
+
+  {{#if outstanding}}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:{{#if outstanding.count}}#fff8e1{{else}}#e8f5e9{{/if}};border:1px solid {{#if outstanding.count}}#ffe082{{else}}#a5d6a7{{/if}};border-radius:10px;padding:12px 14px;margin:0 0 14px;">
+    {{#if outstanding.count}}
+    <span style="font-size:14px;color:#7a5400;">
+      <strong>Outstanding for {{outstanding.techName}}: ${{outstanding.total}}</strong>
+      across {{outstanding.count}} unpaid project{{#unless (eq outstanding.count 1)}}s{{/unless}}
+    </span>
+    <form method="post" action="/projects/pay-all" style="margin:0;"
+          onsubmit="return confirm('Mark all {{outstanding.count}} unpaid projects for {{outstanding.techName}} as paid (${{outstanding.total}} total)? Amounts without a saved value are locked in at the tier suggestion.');">
+      <input type="hidden" name="tech" value="{{techFilter}}">
+      <input type="hidden" name="pay" value="{{payFilter}}">
+      <button type="submit" class="btn" style="padding:9px 16px;font-size:14px;background:#2e7d32;">✓ Mark all paid — ${{outstanding.total}}</button>
+    </form>
+    {{else}}
+    <span style="font-size:14px;color:#1b5e20;"><strong>{{outstanding.techName}} is all settled</strong> — no unpaid projects.</span>
+    {{/if}}
+  </div>
+  {{/if}}
   {{/if}}{{/if}}
   {{#if recent.length}}
   <ul class="list">

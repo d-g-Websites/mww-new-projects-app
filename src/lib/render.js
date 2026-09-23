@@ -367,6 +367,10 @@ function buildView(project, opts = {}) {
     // to itself or the spoke it's already mentioning in 'Served by
     // Our X Office'.
     nearbyLinks: buildNearbyLinks(project),
+    // Link back to the job's own town page (or, for towns without a
+    // page, the nearest spoke it was bound to). Skipped when that page
+    // is the hub, which the 'Served by' block already links.
+    townPage: buildTownPage(project, hub),
     trustSignals: TRUST_SIGNALS,
     // The optional extra photos. First one becomes the hero
     // background, all of them populate the in-page gallery section.
@@ -530,6 +534,18 @@ function windowScopeTags(extras = {}) {
 
 function plur(n, singular) {
   return n === 1 ? singular : `${singular}s`;
+}
+
+function buildTownPage(project, hub) {
+  // Jobs in the hub's own town already link that page via 'Served by'.
+  if (project.city_slug === hub.hubSlug) return null;
+  // A city that is another hub (e.g. Chicago jobs run by Downtown) links
+  // to the neighborhood spoke the job was bound to instead.
+  const cityIsHub = !!getHub(project.city_slug);
+  const own = cityIsHub ? null : getCity(project.city_slug);
+  const town = own || (project.spoke_slug ? getCity(project.spoke_slug) : null);
+  if (!town || town.slug === hub.hubSlug) return null;
+  return { slug: town.slug, name: town.name, isOwnCity: !!own || cityIsHub };
 }
 
 function buildNearbyLinks(project) {

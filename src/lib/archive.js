@@ -113,6 +113,7 @@ function buildView({ kind, focus, projects }) {
   const cards = projects.map(buildCard);
 
   let title, h1Html, intro, urlPath, breadcrumb, hub, ctaHeading, ctaSub;
+  let townPage = null;
 
   if (kind === 'master') {
     title = 'Completed Projects | My Window Washing';
@@ -153,6 +154,8 @@ function buildView({ kind, focus, projects }) {
       { name: 'Projects', href: '/projects/' },
       { name: `${cityName}, IL` },
     ];
+    // Link the archive to the town's own service page when one exists.
+    if (cityObj) townPage = { slug: cityObj.slug, name: cityName };
     hub = hubObj || GENERIC_HUB;
     ctaHeading = `Ready to schedule yours in ${cityName}?`;
     ctaSub = `Served by our ${hubObj?.name || 'local'} team — same-day and next-day appointments often available.`;
@@ -173,6 +176,7 @@ function buildView({ kind, focus, projects }) {
     cards,
     breadcrumb,
     hub,
+    townPage,
     showFilters: kind === 'master',
     services: SERVICES,
     cta: { heading: ctaHeading, sub: ctaSub },

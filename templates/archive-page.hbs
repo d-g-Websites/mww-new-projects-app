@@ -71,6 +71,8 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .arc-hero h1 { font-size: 36px; font-weight: 800; margin: 0 0 12px; line-height: 1.15; }
 .arc-hero h1 span { color: #4caf50; }
 .arc-hero p { color: rgba(255,255,255,.78); font-size: 17px; line-height: 1.6; max-width: 760px; margin: 0 0 14px; }
+.arc-hero-town a { color: #81c784; font-weight: 700; text-decoration: none; border-bottom: 1px solid rgba(129,199,132,.5); }
+.arc-hero-town a:hover { color: #fff; border-color: #fff; }
 .arc-hero-count { display: inline-block; background: rgba(76,175,80,.18); border: 1px solid rgba(76,175,80,.35); color: #81c784; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 20px; letter-spacing: .3px; text-transform: uppercase; }
 
 /* ── FILTER BAR ── */
@@ -191,6 +193,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   <div class="arc-hero-inner">
     <h1>{{{h1Html}}}</h1>
     <p>{{intro}}</p>
+    {{#if townPage}}<p class="arc-hero-town"><a href="../{{townPage.slug}}">Window washing &amp; gutter cleaning in {{townPage.name}}, IL &rarr;</a></p>{{/if}}
     <span class="arc-hero-count">{{count}} {{#if (eq count 1)}}Project{{else}}Projects{{/if}}</span>
   </div>
 </div>

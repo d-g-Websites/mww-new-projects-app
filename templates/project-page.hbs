@@ -270,7 +270,7 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
 .google-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #4285F4; }
 
 /* ── INTERNAL LINK BLOCK ── */
-.proj-link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.proj-link-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
 .proj-narrative-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
 .proj-link-card { display: flex; align-items: center; gap: 16px; background: #f5f8fa; border: 1px solid #e0e8f0; border-radius: 14px; padding: 24px; text-decoration: none; transition: border-color .2s, box-shadow .2s, transform .15s; }
 .proj-link-card:hover { border-color: rgba(76,175,80,.5); box-shadow: 0 6px 20px rgba(19,48,71,.1); transform: translateY(-2px); }
@@ -685,6 +685,16 @@ body { padding-top: 108px; font-family: "Open Sans", sans-serif; color: #595959;
   <div class="proj-section-inner">
     <h2 class="proj-section-title" style="margin-bottom:20px;">Served by Our {{hub.name}} Office</h2>
     <div class="proj-link-grid">
+      {{#if townPage}}
+      <a href="../{{townPage.slug}}" class="proj-link-card">
+        <div class="proj-link-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div>
+          <div class="proj-link-label">{{#if townPage.isOwnCity}}{{townPage.name}} Service Page{{else}}Nearest Service Area{{/if}}</div>
+          <div class="proj-link-title">Window Washing &amp; Gutter Cleaning in {{townPage.name}}, IL</div>
+          <div class="proj-link-desc">Services, pricing and local details for {{townPage.name}} homes</div>
+        </div>
+      </a>
+      {{/if}}
       <a href="../{{hub.hubSlug}}" class="proj-link-card">
         <div class="proj-link-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
         <div>

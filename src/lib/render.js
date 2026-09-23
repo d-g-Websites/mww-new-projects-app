@@ -353,7 +353,10 @@ function buildView(project, opts = {}) {
     customerName:    project.customer_name,
     customerInitial: initialOf(project.customer_name),
     narrativeParagraphs: parseNarrative(project.narrative),
-    serviceTags: scopeTagsFor(service.value, project.extras || {}),
+    serviceTags: scopeTagsFor(service.value, project.extras || {}).map(label => ({
+      label,
+      href: TAG_PAGES[label] || service.servicePage,
+    })),
     related,
     footerRecent,
     map: buildMap(hub),
@@ -433,6 +436,14 @@ function defaultServiceLevel(serviceVal) {
 // present, and counted items like screens, storm windows, skylights,
 // window wells. Other services still use static defaults until they
 // grow their own service-specific form.
+// Scope-of-work tags normally link to the main service page. Tags that
+// have their own supporting page (a sub-topic of the main service) link
+// there instead, so those pages get contextual links from real jobs.
+const TAG_PAGES = {
+  'Interior Window Cleaning': 'inside-out-window-washing',
+  'Gutter Guards':            'gutter-cleaning-with-guards',
+};
+
 function scopeTagsFor(serviceVal, extras) {
   if (serviceVal === 'window-cleaning') return windowScopeTags(extras);
   if (serviceVal === 'gutter-cleaning') return gutterScopeTags(extras);

@@ -211,15 +211,29 @@
     ac.addListener('place_changed', function () {
       var place = ac.getPlace();
       if (!place.address_components) return;
-      var city = '', state = '', zip = '', street = '';
+      var state = '', zip = '', street = '';
+      // Unincorporated addresses (e.g. 34950 N Gogol Ave, Ingleside)
+      // come back with no `locality` component, which used to leave the
+      // submit button stuck on "Pick an address first". Fall back to the
+      // postal city in the formatted address ("street, City, IL 60041,
+      // USA"), then to looser component types. Township
+      // (administrative_area_level_3) is last since it's rarely the name
+      // customers use.
+      var cityByType = {};
       for (var i = 0; i < place.address_components.length; i++) {
         var c = place.address_components[i];
         if (c.types.indexOf('route') !== -1) street = c.long_name;
-        else if (c.types.indexOf('locality') !== -1) city = c.long_name;
-        else if (!city && c.types.indexOf('sublocality') !== -1) city = c.long_name;
         else if (c.types.indexOf('administrative_area_level_1') !== -1) state = c.short_name;
         else if (c.types.indexOf('postal_code') !== -1) zip = c.long_name;
+        for (var t = 0; t < c.types.length; t++) {
+          if (!cityByType[c.types[t]]) cityByType[c.types[t]] = c.long_name;
+        }
       }
+      var addrParts = (place.formatted_address || '').split(',').map(function (s) { return s.trim(); });
+      var postalCity = addrParts.length >= 4 ? addrParts[addrParts.length - 3] : '';
+      var city = cityByType.locality || cityByType.postal_town || postalCity ||
+                 cityByType.sublocality || cityByType.neighborhood ||
+                 cityByType.administrative_area_level_3 || '';
       var lat = '', lng = '';
       if (place.geometry && place.geometry.location) {
         lat = place.geometry.location.lat();
@@ -234,6 +248,14 @@
       document.getElementById('address-lng').value = lng;
       document.getElementById('address-place-id').value = place.place_id || '';
       setResolved(place.formatted_address, city, state, zip);
+      var help = document.getElementById('address-help');
+      if (!city) {
+        help.textContent = 'Google didn\'t return a city for this address. Try a nearby house number, or text the office.';
+        help.style.color = '#c62828';
+      } else {
+        help.textContent = 'We\'ll pull the city automatically.';
+        help.style.color = '';
+      }
     });
     // If the user retypes after selecting, invalidate the resolved state
     // so they have to pick from the dropdown again.
@@ -263,7 +285,7 @@
     }
   };
 </script>
-<script async defer src="https://maps.googleapis.com/maps/api/js?key={{googleMapsKey}}&libraries=places&callback=initAutocomplete&loading=async"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{googleMapsKey}}&libraries=places&language=en&region=us&callback=initAutocomplete&loading=async"></script>
 {{else}}
 <script>
   // No API key configured — let the form submit as-is using a manual

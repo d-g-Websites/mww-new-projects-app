@@ -74,6 +74,10 @@ export function getHub(key) {
 export function resolveCityFromLocality(locality, { lat, lng, fallbackHub = 'northbrook' } = {}) {
   if (!locality) return null;
   const slug = slugifyCity(locality);
+  // A non-Latin city name (phone set to Russian, etc.) slugifies to ""
+  // and would produce a URL with no city in it. Reject it so the form
+  // re-renders with the "pick a real address" banner instead.
+  if (!slug) return null;
   const known = getCity(slug);
   if (known) {
     return { ...known, source: 'cities.json', spokeSlug: known.slug };

@@ -136,7 +136,7 @@
 </form>
 
 <form method="post" action="/projects/{{project.id}}/delete" style="margin-top:14px;"
-      onsubmit="return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row. cPanel still needs a deploy click to remove it from the live site. This cannot be undone — proceed?');">
+      onsubmit="return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row. It leaves the live site about a minute later. This cannot be undone — proceed?');">
   <button type="submit" class="btn btn-block" style="background:#c62828;color:#fff;border:none;">
     Delete project from website
   </button>

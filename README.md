@@ -10,8 +10,10 @@ helpers, and per-hub Google-review QR codes.
 
 Deployed on a separate VPS at `project.mywindowwashing.com` — it never
 serves the public site itself, it only edits the static-site repo and
-runs `git push`. cPanel still needs a manual Deploy HEAD Commit click
-for changes to go live.
+runs `git push`. Each push to the static-site repo's `master` makes
+GitHub Actions tell cPanel to pull it, so changes go live about a
+minute after the push. Each push to this repo's `main` deploys the
+dashboard to the VPS the same way (see Deploy a code change).
 
 ---
 
@@ -173,7 +175,8 @@ static-site repo and:
 - Commits as `MWW Dashboard <noreply@…>` and pushes
 - Flips the row to `status = 'published'`
 
-cPanel still has to be told to deploy.
+The push starts the static site's deploy workflow, which makes cPanel
+pull it; the page is live about a minute later.
 
 ### Editing published projects (admin only)
 
@@ -200,8 +203,8 @@ Hard-deletes everything tied to the project:
 - Any archive pages it appeared on (regenerated)
 - The DB row
 
-A summary screen lists what was removed and reminds the admin to do
-the cPanel deploy.
+A summary screen lists what was removed. The push takes it off the
+live site about a minute later.
 
 ### Per-spoke + per-service + master archive pages
 
@@ -421,31 +424,43 @@ Bootstrap admin: on first start with an empty users table, an
 
 ### Deploy a code change
 
-```
-cd /var/www/mww-dashboard-app
-git pull
-sudo systemctl restart mww-dashboard
-```
+Push to `main`. `.github/workflows/deploy.yml` logs in to the VPS over
+SSH and runs `scripts/deploy.sh`, which pulls, runs `npm ci` when
+`package-lock.json` changed, restarts `mww-dashboard`, and prints the
+commit now running; the workflow then checks `/login` answers 200.
+Re-run it from the Actions tab (Run workflow, branch `main`), or run
+`bash scripts/deploy.sh` on the VPS by hand.
 
-(`npm install` only if package.json changed.)
+One-time VPS setup it relies on (as the user that owns
+`/var/www/mww-dashboard-app`):
+
+- A dedicated key pair: public key in `~/.ssh/authorized_keys` as
+  `command="bash /var/www/mww-dashboard-app/scripts/deploy.sh",restrict ssh-ed25519 AAAA… github-deploy`,
+  private key in the GitHub secret `VPS_SSH_KEY`, the username in
+  `VPS_SSH_USER`.
+- `/etc/sudoers.d/mww-deploy`:
+  `<user> ALL=(root) NOPASSWD: /usr/bin/systemctl restart mww-dashboard`
+- `npm` on the PATH of a non-interactive SSH login (not only via nvm in
+  `.bashrc`).
 
 ### Publish flow (admin)
 
 1. Telegram ping → click the "Review & publish" link
 2. Preview the page in the iframe
 3. **Publish** — writes to the static-site repo and pushes
-4. cPanel: Git Version Control → Update from Remote → Deploy HEAD Commit
+4. The page is live about a minute later (static site's GitHub Actions
+   run → cPanel pull)
 
 ### Edit a published project (admin)
 
 Dashboard → tile → **Edit** → make changes → **Save changes & update
-live site**. Same cPanel deploy click required.
+live site**. Live about a minute later.
 
 ### Delete a published project (admin)
 
 Dashboard → tile → **Delete** → confirm. Removes everything (HTML,
 photos, spoke tile, sitemap entry, affected archives, DB row).
-cPanel deploy still required to remove from the live site.
+Gone from the live site about a minute later.
 
 ### Add a tech (admin)
 
@@ -475,8 +490,6 @@ for each hub from
   with. Template changes only affect newly generated pages. To update
   an existing page, open it in the dashboard and click Save (no
   changes needed — the save re-renders).
-- **cPanel still needs a manual deploy click** for any push to take
-  effect on the live site.
 - **Google Business Profile posting** is no longer possible via API
   for small businesses (Google deprecated the endpoint in 2024). The
   review-QR page is the closest substitute.

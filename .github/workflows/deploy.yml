@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time; a newer push waits for the running one instead of racing it.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # push to main, or a manual "Run workflow" started from main; nothing else
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      # The key in VPS_SSH_KEY is pinned on the VPS to scripts/deploy.sh, so this
+      # login can only run the deploy. The host key below is the VPS's own, so the
+      # runner refuses to talk to anything else at that address.
+      - name: Run scripts/deploy.sh on the VPS
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
+        run: |
+          if [ -z "$VPS_SSH_KEY" ] || [ -z "$VPS_SSH_USER" ]; then echo "::error::VPS_SSH_KEY or VPS_SSH_USER secret is not set"; exit 1; fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "74.208.216.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFRKjXd727YKSTUpB5U2/hqsx3zyF+V1a83IpZjReXyM" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "$VPS_SSH_USER@74.208.216.40" deploy | tee deploy.log \
+            || { echo "::error::the deploy script failed on the VPS (output above)"; exit 1; }
+          deployed=$(sed -n 's/^deployed //p' deploy.log | tail -1)
+          [ -n "$deployed" ] || { echo "::error::the VPS did not report a deployed commit"; exit 1; }
+          if [ "$deployed" != "$GITHUB_SHA" ]; then
+            echo "::warning::VPS now runs $deployed, this push is $GITHUB_SHA (main may have moved on)"
+          fi
+
+      - name: Dashboard still answers
+        run: |
+          sleep 10
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 https://project.mywindowwashing.com/login)
+          echo "login page: $code"
+          [ "$code" = "200" ] || { echo "::error::login page answered $code after the deploy"; exit 1; }

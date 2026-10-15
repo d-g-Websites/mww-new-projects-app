@@ -14,9 +14,7 @@
   <p style="font-size:14px;">{{attached.service_label}} — {{attached.city_name}}, IL (<code>{{attached.slug}}</code>)</p>
   {{#if republished}}
   <p style="font-size:14px;">The published page was re-rendered with the video embed and pushed to the static-site repo.</p>
-  <div class="alert" style="background:#fff3e0;border-color:#ffb74d;color:#9c4a00;margin-bottom:0;">
-    <strong>cPanel needs a deploy</strong> for the embed to appear on the live site: Git Version Control → Update from Remote → Deploy HEAD Commit.
-  </div>
+  <p style="font-size:14px;margin-bottom:0;">The embed appears on the live site about a minute later.</p>
   {{else}}
   <p style="font-size:14px;">The video URL is saved on the project — it'll be embedded on the page when the project is published.</p>
   {{/if}}

@@ -28,8 +28,19 @@ jobs:
           set -o pipefail
           if [ -z "$VPS_SSH_KEY" ] || [ -z "$VPS_SSH_USER" ]; then echo "::error::VPS_SSH_KEY or VPS_SSH_USER secret is not set"; exit 1; fi
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          # The secret holds either the key file as is, or `base64 -w0` of it (one line,
+          # so copying it out of a terminal cannot break it). Stray CRs, trailing spaces
+          # and wrapping are dropped either way.
+          if printf '%s' "$VPS_SSH_KEY" | grep -q 'BEGIN OPENSSH PRIVATE KEY'; then
+            printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' | sed 's/[[:space:]]*$//' > ~/.ssh/deploy_key
+          else
+            printf '%s' "$VPS_SSH_KEY" | tr -d ' \t\r\n' | base64 -d > ~/.ssh/deploy_key \
+              || { echo "::error::VPS_SSH_KEY is neither a private key nor valid base64"; exit 1; }
+          fi
           chmod 600 ~/.ssh/deploy_key
+          # Compare with `ssh-keygen -lf ~/.ssh/github_deploy.pub` on the VPS.
+          ssh-keygen -y -f ~/.ssh/deploy_key | ssh-keygen -lf - \
+            || { echo "::error::VPS_SSH_KEY does not hold a readable private key; copy it again"; exit 1; }
           echo "74.208.216.40 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFRKjXd727YKSTUpB5U2/hqsx3zyF+V1a83IpZjReXyM" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
             "$VPS_SSH_USER@74.208.216.40" deploy | tee deploy.log \

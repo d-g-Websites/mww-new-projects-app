@@ -436,7 +436,9 @@ One-time VPS setup it relies on (as the user that owns
 
 - A dedicated key pair: public key in `~/.ssh/authorized_keys` as
   `command="bash /var/www/mww-dashboard-app/scripts/deploy.sh",restrict ssh-ed25519 AAAA… github-deploy`,
-  private key in the GitHub secret `VPS_SSH_KEY`, the username in
+  private key in the GitHub secret `VPS_SSH_KEY` (paste the output of
+  `base64 -w0 ~/.ssh/github_deploy`: one line, safe to copy from a
+  terminal; the key file as is works too), the username in
   `VPS_SSH_USER`.
 - `/etc/sudoers.d/mww-deploy`:
   `<user> ALL=(root) NOPASSWD: /usr/bin/systemctl restart mww-dashboard`

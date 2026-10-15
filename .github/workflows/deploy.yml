@@ -24,6 +24,8 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
         run: |
+          # without this a failing ssh is hidden by tee's exit status
+          set -o pipefail
           if [ -z "$VPS_SSH_KEY" ] || [ -z "$VPS_SSH_USER" ]; then echo "::error::VPS_SSH_KEY or VPS_SSH_USER secret is not set"; exit 1; fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key

@@ -173,6 +173,17 @@ export function markPublished(id) {
   `).run(id);
 }
 
+// Undo markPublished() when a publish fails partway, so the row goes
+// back to the queue instead of showing up in archive listings.
+export function revertPublished(id, status, publishedAt) {
+  db.prepare(`
+    UPDATE projects
+       SET status = ?,
+           published_at = ?
+     WHERE id = ?
+  `).run(status, publishedAt ?? null, id);
+}
+
 export function deleteProject(id) {
   db.prepare('DELETE FROM projects WHERE id = ?').run(id);
 }

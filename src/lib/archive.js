@@ -9,12 +9,11 @@
 // set: master + the published project's service + the published
 // project's spoke.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Handlebars from 'handlebars';
 import {
   listPublishedAll, listPublishedBySpoke, listPublishedByService,
-  listServicesWithPublished, listSpokesWithPublished,
 } from './db.js';
 import { SERVICES, getService, getCity, getHub } from './slug.js';
 import { serializeJsonLd } from './json-ld.js';
@@ -197,6 +196,13 @@ function titleCase(slug) {
 
 // ── Write helpers ────────────────────────────────────────────────────
 
+// Only list projects whose page is actually in the site repo. A DB row
+// can say 'published' while its page never landed (a failed or raced
+// publish), and a card for it would link to a 404.
+export function onSite(siteRepo, projects) {
+  return projects.filter(p => existsSync(join(siteRepo, 'projects', `${p.slug}.html`)));
+}
+
 function ensureProjectsDir(siteRepo) {
   const dir = join(siteRepo, 'projects');
   mkdirSync(dir, { recursive: true });
@@ -204,7 +210,7 @@ function ensureProjectsDir(siteRepo) {
 }
 
 export function writeMasterArchive(siteRepo) {
-  const projects = listPublishedAll();
+  const projects = onSite(siteRepo, listPublishedAll());
   if (projects.length === 0) return null;
   const view = buildView({ kind: 'master', focus: null, projects });
   const outPath = join(ensureProjectsDir(siteRepo), 'index.html');
@@ -213,7 +219,7 @@ export function writeMasterArchive(siteRepo) {
 }
 
 export function writeServiceArchive(siteRepo, serviceValue) {
-  const projects = listPublishedByService(serviceValue);
+  const projects = onSite(siteRepo, listPublishedByService(serviceValue));
   if (projects.length === 0) return null;
   const view = buildView({ kind: 'service', focus: serviceValue, projects });
   const outPath = join(ensureProjectsDir(siteRepo), `${serviceValue}.html`);
@@ -223,7 +229,7 @@ export function writeServiceArchive(siteRepo, serviceValue) {
 
 export function writeSpokeArchive(siteRepo, spokeSlug) {
   if (!spokeSlug) return null;
-  const projects = listPublishedBySpoke(spokeSlug);
+  const projects = onSite(siteRepo, listPublishedBySpoke(spokeSlug));
   if (projects.length === 0) return null;
   const view = buildView({ kind: 'spoke', focus: spokeSlug, projects });
   const outPath = join(ensureProjectsDir(siteRepo), `${spokeSlug}.html`);
@@ -246,14 +252,4 @@ export function writeAffectedArchives(siteRepo, project) {
   const sp = writeSpokeArchive(siteRepo, project.spoke_slug || project.city_slug);
   if (sp) written.push(sp);
   return written;
-}
-
-// Inventory of archive URLs that currently exist in the static site,
-// so sitemap.js can add/refresh entries for each. Returns relative
-// URL paths under the site root.
-export function currentArchiveUrls() {
-  const urls = ['/projects/'];
-  for (const svc of listServicesWithPublished()) urls.push(`/projects/${svc}`);
-  for (const spoke of listSpokesWithPublished()) urls.push(`/projects/${spoke}`);
-  return urls;
 }

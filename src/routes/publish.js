@@ -2,13 +2,16 @@ import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { writeProjectPage } from '../lib/render.js';
 import { updateSpokePage, unpublishFromSpoke } from '../lib/spoke-update.js';
-import { updateSitemap, updateSitemapArchives, removeFromSitemap } from '../lib/sitemap.js';
-import { commitAndPush, syncSiteRepo } from '../lib/git.js';
 import {
-  markPublished, getProject, deleteProject,
+  updateSitemap, updateSitemapArchives, removeFromSitemap,
+  touchSitemapLastmod, removeSitemapUrls, urlForSiteFile,
+} from '../lib/sitemap.js';
+import { commitAndPush, syncSiteRepo, withSiteRepoLock } from '../lib/git.js';
+import {
+  markPublished, revertPublished, getProject, deleteProject,
   listPublishedBySpoke, listPublishedByService, listPublishedAll,
 } from '../lib/db.js';
-import { writeAffectedArchives, currentArchiveUrls } from '../lib/archive.js';
+import { writeAffectedArchives, onSite } from '../lib/archive.js';
 import { unlinkSync, existsSync as fsExistsSync } from 'node:fs';
 import { generateSocialPosts } from '../lib/social-post.js';
 import { publishToFacebook } from '../lib/zernio.js';
@@ -39,7 +42,27 @@ async function maybeAutoPostFacebook(project) {
 //   4. Patch sitemap.xml
 //   5. Commit + push to the deploy branch
 // Then flip the DB row to status=published.
-export async function publishProject(project) {
+//
+// Runs under the site-repo lock. If any step fails after step 3 marked
+// the row published, the row goes back to its previous status so the
+// archives don't list a project whose page never reached the site.
+export function publishProject(project) {
+  return withSiteRepoLock(async () => {
+    const before = getProject(project.id);
+    // A second click queued behind the first would publish it twice.
+    if (before?.status === 'published') throw new Error('This project is already published.');
+    try {
+      return await publishProjectNow(project);
+    } catch (err) {
+      if (getProject(project.id)?.status === 'published') {
+        revertPublished(project.id, before.status, before.published_at);
+      }
+      throw err;
+    }
+  });
+}
+
+async function publishProjectNow(project) {
   const siteRepo = process.env.SITE_REPO_PATH;
   const branch   = process.env.SITE_REPO_BRANCH || 'master';
   const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
@@ -80,9 +103,8 @@ export async function publishProject(project) {
 
   // 3. Mark published in DB BEFORE archive regeneration so the new
   //    project is included in listPublishedAll() / -BySpoke() / -ByService()
-  //    queries that the archive pages build from. Slight ordering wart
-  //    (we mark published before the git push completes), but the
-  //    push itself is idempotent — if it fails we revert below.
+  //    queries that the archive pages build from. publishProject()
+  //    reverts this if anything below fails.
   markPublished(project.id);
 
   // 4. Patch the matching spoke page. spoke_slug is what
@@ -95,7 +117,7 @@ export async function publishProject(project) {
   // Count of published projects for this spoke — used to build the
   // "View all N completed projects in [City] →" footer link on the
   // spoke's Recent Projects section.
-  const spokeProjectCount = listPublishedBySpoke(spokeToPatch).length;
+  const spokeProjectCount = onSite(siteRepo, listPublishedBySpoke(spokeToPatch)).length;
   const spokeResult = updateSpokePage(siteRepo, spokeToPatch, freshProject, {
     projectCount: spokeProjectCount,
   });
@@ -106,11 +128,13 @@ export async function publishProject(project) {
   //    truncated from the spoke tile grid still has a home.
   const archivePaths = writeAffectedArchives(siteRepo, freshProject);
 
-  // 6. Patch sitemap.xml — both the new project's URL and the
-  //    archive URLs (some of which may be new this publish).
+  // 6. Patch sitemap.xml — the new project's URL, the archives this
+  //    publish rewrote (some may be new), and the spoke page that just
+  //    gained a tile.
   const today = new Date().toISOString().slice(0, 10);
   updateSitemap(siteRepo, project, today);
-  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  updateSitemapArchives(siteRepo, archivePaths.map(p => urlForSiteFile(siteRepo, p)), today);
+  if (!spokeResult.skipped) touchSitemapLastmod(siteRepo, [`/${spokeToPatch}`], today);
   const sitemapPath = join(siteRepo, 'sitemap.xml');
 
   // 7. Stage and commit. Paths are relative to the repo root for git.
@@ -160,7 +184,11 @@ function relTo(repo, abs) {
 //     preserve the original published_at)
 // Newly uploaded photos (passed as { before, after, extras } absolute
 // paths) get copied over the existing files at the same filenames.
-export async function republishProject(project, { replacedPhotos = {} } = {}) {
+export function republishProject(project, opts) {
+  return withSiteRepoLock(() => republishProjectNow(project, opts));
+}
+
+async function republishProjectNow(project, { replacedPhotos = {} } = {}) {
   const siteRepo = process.env.SITE_REPO_PATH;
   const branch   = process.env.SITE_REPO_BRANCH || 'master';
   const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
@@ -201,10 +229,10 @@ export async function republishProject(project, { replacedPhotos = {} } = {}) {
   // updates flow into the archive cards' meta too).
   const archivePaths = writeAffectedArchives(siteRepo, project);
 
-  // Refresh the sitemap lastmod for this project + archive URLs.
+  // Refresh the sitemap lastmod for this project + the archives rewritten.
   const today = new Date().toISOString().slice(0, 10);
   updateSitemap(siteRepo, project, today);
-  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  updateSitemapArchives(siteRepo, archivePaths.map(p => urlForSiteFile(siteRepo, p)), today);
   const sitemapPath = join(siteRepo, 'sitemap.xml');
 
   const files = [
@@ -231,7 +259,11 @@ export async function republishProject(project, { replacedPhotos = {} } = {}) {
 // and the DB row. Regenerates the master + service + spoke archive
 // pages without this project. Single commit + push so cPanel's next
 // deploy reflects the deletion.
-export async function unpublishProject(project) {
+export function unpublishProject(project) {
+  return withSiteRepoLock(() => unpublishProjectNow(project));
+}
+
+async function unpublishProjectNow(project) {
   const siteRepo = process.env.SITE_REPO_PATH;
   const branch   = process.env.SITE_REPO_BRANCH || 'master';
   const pushFlag = process.env.SITE_REPO_PUSH !== 'false';
@@ -274,7 +306,7 @@ export async function unpublishProject(project) {
 
   // 4. Patch the spoke page: remove the tile + footer link, refresh
   //    the 'View all N projects' count.
-  const newSpokeCount = listPublishedBySpoke(spokeSlug).length;
+  const newSpokeCount = onSite(siteRepo, listPublishedBySpoke(spokeSlug)).length;
   const spokeResult = unpublishFromSpoke(siteRepo, spokeSlug, project.slug, newSpokeCount);
   const spokePath = join(siteRepo, `${spokeSlug}.html`);
 
@@ -285,24 +317,29 @@ export async function unpublishProject(project) {
   const archivePaths = writeAffectedArchives(siteRepo, project);
 
   const emptyChecks = [
-    { file: 'index.html',             count: listPublishedAll().length },
-    { file: `${project.service}.html`, count: listPublishedByService(project.service).length },
+    { file: 'index.html',             count: onSite(siteRepo, listPublishedAll()).length },
+    { file: `${project.service}.html`, count: onSite(siteRepo, listPublishedByService(project.service)).length },
     { file: `${spokeSlug}.html`,       count: newSpokeCount },
   ];
+  const emptiedArchives = [];
   for (const { file, count } of emptyChecks) {
     if (count === 0) {
       const full = join(siteRepo, 'projects', file);
       if (fsExistsSync(full)) {
         unlinkSync(full);
         removedFiles.push(relTo(siteRepo, full));
+        emptiedArchives.push(urlForSiteFile(siteRepo, full));
       }
     }
   }
 
-  // 6. Strip the project URL from sitemap.xml and refresh archive lastmods.
+  // 6. Strip the project URL (and any archive it emptied) from
+  //    sitemap.xml; refresh lastmod on the archives + spoke it changed.
   removeFromSitemap(siteRepo, project);
+  removeSitemapUrls(siteRepo, emptiedArchives);
   const today = new Date().toISOString().slice(0, 10);
-  updateSitemapArchives(siteRepo, currentArchiveUrls(), today);
+  updateSitemapArchives(siteRepo, archivePaths.map(p => urlForSiteFile(siteRepo, p)), today);
+  if (!spokeResult.skipped) touchSitemapLastmod(siteRepo, [`/${spokeSlug}`], today);
   const sitemapPath = join(siteRepo, 'sitemap.xml');
 
   // 7. Stage everything for the commit. removedFiles for deletes,

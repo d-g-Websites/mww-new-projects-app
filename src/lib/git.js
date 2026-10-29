@@ -11,6 +11,18 @@ function authoredGit(siteRepoPath) {
   });
 }
 
+// Every publish / edit / delete shares one local clone, and each one
+// starts with syncSiteRepo()'s reset --hard + clean. Two running at
+// once let the second wipe the first's not-yet-committed project page,
+// so the first commit failed while its DB row already said published
+// (the 10-26-26 batch lost four pages this way). Run them one at a time.
+let siteRepoQueue = Promise.resolve();
+export function withSiteRepoLock(fn) {
+  const run = siteRepoQueue.then(fn, fn);
+  siteRepoQueue = run.catch(() => {});
+  return run;
+}
+
 // Pull the static-site repo into a clean state before we start writing
 // the new project page. We always want our spoke/sitemap patches to be
 // based on the live `origin/branch`, never on a stale local copy

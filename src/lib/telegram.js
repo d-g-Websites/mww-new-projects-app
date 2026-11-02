@@ -56,3 +56,29 @@ export function notifyNewProject(project) {
   lines.push('', `Review & publish: ${url}`);
   return notifyTelegram(lines.join('\n'));
 }
+
+// A tech changed a project after submitting it. `changes` is a list
+// of short human-readable lines ("Video added: https://…").
+export function notifyProjectUpdate({ project, user, changes, live = false }) {
+  const base = (process.env.DASHBOARD_BASE_URL || 'https://project.mywindowwashing.com').replace(/\/$/, '');
+  const link = project.status === 'published'
+    ? `${base}/projects/${project.id}/edit`
+    : `${base}/projects/${project.id}/preview`;
+  const lines = [
+    `*Project updated by ${md(user.display_name)}*`,
+    '',
+    `*Project:* ${md(project.service_label)} — ${md(project.city_name)}, IL`,
+    `*Status:* ${md(project.status)}`,
+    `*Slug:* \`${md(project.slug)}\``,
+    '',
+    '*What changed:*',
+    ...changes.map(c => `• ${md(c)}`),
+  ];
+  if (live) {
+    lines.push('', 'The change is already on the live page.');
+  } else if (project.status === 'published') {
+    lines.push('', 'Saved to the dashboard only — the live page will pick it up on the next republish.');
+  }
+  lines.push('', `Review: ${link}`);
+  return notifyTelegram(lines.join('\n'));
+}

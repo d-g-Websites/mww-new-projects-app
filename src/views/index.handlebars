@@ -66,6 +66,31 @@
   {{/if}}
 </div>
 
+{{#if activity.length}}
+<div class="card">
+  <h2>Recent updates from techs</h2>
+  <p class="muted" style="margin:-8px 0 12px;">Changes techs made to projects after submitting them. Each one was also sent to Telegram.</p>
+  <ul class="list">
+    {{#each activity}}
+    <li style="padding:10px 0;">
+      <div style="font-size:14px;">
+        <strong>{{#if user_name}}{{user_name}}{{else}}A removed user{{/if}}</strong>
+        {{#if service_label}}
+        updated
+        <a href="/projects/{{project_id}}/{{#if (eq project_status "published")}}edit{{else}}preview{{/if}}">{{service_label}} — {{city_name}}, IL</a>
+        <span class="muted" style="font-size:12px;">({{project_status}})</span>
+        {{else}}
+        updated a project that has since been deleted
+        {{/if}}
+      </div>
+      <div style="font-size:13px;color:#475569;margin-top:2px;word-break:break-word;">{{summary}}</div>
+      <div class="muted" style="font-size:12px;margin-top:2px;">{{created_at}} UTC</div>
+    </li>
+    {{/each}}
+  </ul>
+</div>
+{{/if}}
+
 <div class="card">
   <h2>Recently published</h2>
 

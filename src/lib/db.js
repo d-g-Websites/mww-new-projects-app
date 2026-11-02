@@ -54,6 +54,16 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Changes techs make to a project after submitting it. Feeds the
+  -- admin dashboard's "Recent updates from techs" card.
+  CREATE TABLE IF NOT EXISTS project_activity (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    user_id    INTEGER,
+    summary    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_projects_status_pub
     ON projects(status, published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_projects_city
@@ -360,4 +370,29 @@ export function setSetting(key, value) {
 
 export function deleteSetting(key) {
   db.prepare('DELETE FROM settings WHERE key = ?').run(key);
+}
+
+// ── Project activity log ─────────────────────────────────────────────
+
+export function logActivity({ projectId, userId, summary }) {
+  db.prepare(`
+    INSERT INTO project_activity (project_id, user_id, summary)
+    VALUES (?, ?, ?)
+  `).run(projectId, userId, summary);
+}
+
+// Newest first, joined with the project + user so the dashboard can
+// render "Paul · Window Washing — McHenry, IL · Video added" directly.
+// Deleted projects / users fall out of the join gracefully.
+export function listRecentActivity({ limit = 10 } = {}) {
+  return db.prepare(`
+    SELECT a.id, a.summary, a.created_at, a.project_id,
+           p.service_label, p.city_name, p.status AS project_status,
+           u.display_name AS user_name
+      FROM project_activity a
+      LEFT JOIN projects p ON p.id = a.project_id
+      LEFT JOIN users    u ON u.id = a.user_id
+     ORDER BY a.id DESC
+     LIMIT ?
+  `).all(limit);
 }

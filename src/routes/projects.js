@@ -4,8 +4,9 @@ import { mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { requireAuth } from '../middleware/auth.js';
 import { SERVICES, getService, getHub, buildSlug, isSlugAvailable, resolveCityFromLocality, findNearestCities } from '../lib/slug.js';
-import { insertDraft, updateDraft, getProject, listPublished, countPublished, listPending, listDrafts, markPending, deleteProject, listUsers } from '../lib/db.js';
+import { insertDraft, updateDraft, getProject, listPublished, countPublished, listPending, listDrafts, markPending, deleteProject, listUsers, listRecentActivity } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
+import { recordTechUpdate } from '../lib/project-updates.js';
 
 // Placeholder text shown when Claude narrative generation fails, so
 // the tech can spot it immediately on the preview page and either
@@ -19,6 +20,12 @@ import { publishProject, republishProject, unpublishProject } from './publish.js
 import { requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
+
+// Admins can act on any project; techs only on projects credited to them.
+function canTouch(req, p) {
+  return req.user.role === 'admin' || p.submitted_by === req.user.id;
+}
+const NOT_YOURS = 'You can only open your own projects.';
 
 const TMP_DIR = join(process.cwd(), 'tmp', 'uploads');
 mkdirSync(TMP_DIR, { recursive: true });
@@ -109,6 +116,7 @@ router.get('/', (req, res) => {
 
   res.render('index', {
     drafts, pending, recent,
+    activity: isAdmin ? listRecentActivity({ limit: 10 }) : [],
     payFilter,
     techFilter,
     techChoices: isAdmin ? listUsers() : [],
@@ -588,6 +596,7 @@ router.post('/projects/:id/regenerate-faq', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
     const hubObj = getHub(p.hub) || { name: p.hub, phone: '' };
     const faq = await generateFaq({
       service:      p.service_label,
@@ -606,8 +615,10 @@ router.post('/projects/:id/regenerate-faq', async (req, res, next) => {
     if (p.status === 'published') {
       const fresh = getProject(p.id);
       await republishProject(fresh);
-      return res.redirect(`/projects/${p.id}/edit`);
+      recordTechUpdate(p, req.user, ['FAQ regenerated with AI'], { live: true });
+      return res.redirect(req.user.role === 'admin' ? `/projects/${p.id}/edit` : `/projects/${p.id}/preview`);
     }
+    recordTechUpdate(p, req.user, ['FAQ regenerated with AI']);
     res.redirect(`/projects/${p.id}/preview`);
   } catch (err) {
     console.error(`[faq regen] failed for project ${req.params.id}:`, err.message);
@@ -622,6 +633,7 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
     if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
     const nearbyTowns = findNearestCities(p.address_lat, p.address_lng, {
       count: 3,
       excludeSlugs: [p.city_slug, p.spoke_slug].filter(Boolean),
@@ -643,8 +655,10 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
     if (p.status === 'published') {
       const fresh = getProject(p.id);
       await republishProject(fresh);
-      return res.redirect(`/projects/${p.id}/edit`);
+      recordTechUpdate(p, req.user, ['Narrative regenerated with AI'], { live: true });
+      return res.redirect(req.user.role === 'admin' ? `/projects/${p.id}/edit` : `/projects/${p.id}/preview`);
     }
+    recordTechUpdate(p, req.user, ['Narrative regenerated with AI']);
     res.redirect(`/projects/${p.id}/preview`);
   } catch (err) {
     console.error(`[narrative regen] failed for project ${req.params.id}:`, err.message);
@@ -656,6 +670,7 @@ router.post('/projects/:id/regenerate-narrative', async (req, res, next) => {
 router.get('/projects/:id/preview', (req, res) => {
   const p = getProject(Number(req.params.id));
   if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+  if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
   // Render with the in-progress narrative, even though the photos are
   // still in tmp/ (the page will show 404s for the <img> tags — that's
   // fine, the tech is reviewing copy, not the photos).
@@ -669,7 +684,13 @@ router.get('/projects/:id/preview', (req, res) => {
 router.post('/projects/:id/narrative', (req, res) => {
   const p = getProject(Number(req.params.id));
   if (!p) return res.status(404).render('error', { message: 'Project not found.' });
-  updateDraft(p.id, { narrative: req.body.narrative || '' });
+  if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
+  const next = req.body.narrative || '';
+  updateDraft(p.id, { narrative: next });
+  // Only worth a ping when the text actually changed.
+  if (next.trim() !== (p.narrative || '').trim()) {
+    recordTechUpdate(p, req.user, ['Narrative edited by hand']);
+  }
   res.redirect(`/projects/${p.id}/preview`);
 });
 
@@ -677,6 +698,7 @@ router.post('/projects/:id/narrative', (req, res) => {
 router.get('/projects/:id/preview/iframe', (req, res) => {
   const p = getProject(Number(req.params.id));
   if (!p) return res.status(404).send('not found');
+  if (!canTouch(req, p)) return res.status(403).send('forbidden');
   res.type('html').send(renderProjectHtml(p));
 });
 
@@ -802,6 +824,7 @@ router.post('/projects/:id/save', async (req, res, next) => {
     if (p.status === 'published') {
       return res.status(409).render('error', { message: 'This project is already published.' });
     }
+    if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
     markPending(p.id);
     // Fire-and-forget the Telegram ping so a flaky Telegram doesn't
     // block the tech from finishing the submission. Skip the ping

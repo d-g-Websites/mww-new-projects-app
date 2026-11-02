@@ -18,6 +18,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { getProject, updateDraft, listDrafts, listPending, listPublished } from '../lib/db.js';
 import { isConfigured, isConnected, getAuthUrl, exchangeCode, disconnect, uploadVideo } from '../lib/youtube.js';
 import { generateVideoMeta } from '../lib/video-meta.js';
+import { recordTechUpdate } from '../lib/project-updates.js';
 import { republishProject } from './publish.js';
 
 const router = Router();
@@ -120,12 +121,16 @@ router.post('/videos/upload', requireAuth, upload.single('video'), async (req, r
     if (projectId) {
       const project = projectForUser(projectId, req.user);
       if (project) {
+        const hadVideo = Boolean(project.video_url);
         updateDraft(projectId, { video_url: url });
         attached = project;
         if (project.status === 'published') {
           await republishProject(getProject(projectId));
           republished = true;
         }
+        recordTechUpdate(project, req.user, [
+          `${hadVideo ? 'Video replaced' : 'Video added'}: ${url}`,
+        ], { live: republished });
       }
     }
 

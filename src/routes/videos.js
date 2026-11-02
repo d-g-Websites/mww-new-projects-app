@@ -30,18 +30,31 @@ const upload = multer({
 });
 
 // Projects offered in the "attach to project" dropdown: everything
-// unpublished plus the 30 most recent published ones.
-function projectChoices() {
+// unpublished plus the 30 most recent published ones. Techs only get
+// their own projects; admins get everyone's pending + published, but
+// only their own drafts, matching the dashboard.
+function projectChoices(user) {
+  const own = { submittedBy: user.id };
+  const scope = user.role === 'admin' ? {} : own;
   const tag = (p, status) => ({
     id: p.id,
-    label: `${p.service_label} — ${p.city_name}, IL (${status})`,
+    label: `${p.service_label} — ${p.city_name}, IL (${status})${user.role === 'admin' && p.submitted_by_name ? ` · ${p.submitted_by_name}` : ''}`,
     hasVideo: Boolean(p.video_url),
   });
   return [
-    ...listPending().map(p => tag(p, 'pending')),
-    ...listDrafts().map(p => tag(p, 'draft')),
-    ...listPublished({ limit: 30 }).map(p => tag(p, 'published')),
+    ...listPending(scope).map(p => tag(p, 'pending')),
+    ...listDrafts(own).map(p => tag(p, 'draft')),
+    ...listPublished({ limit: 30, ...scope }).map(p => tag(p, 'published')),
   ];
+}
+
+// Load a project only if this user is allowed to attach to it. Techs
+// can only touch projects credited to them.
+function projectForUser(id, user) {
+  const project = id ? getProject(Number(id)) : null;
+  if (!project) return null;
+  if (user.role !== 'admin' && project.submitted_by !== user.id) return null;
+  return project;
 }
 
 router.get('/videos', requireAuth, (req, res) => {
@@ -49,7 +62,7 @@ router.get('/videos', requireAuth, (req, res) => {
     configured: isConfigured(),
     connected: isConnected(),
     isAdmin: req.user.role === 'admin',
-    projects: projectChoices(),
+    projects: projectChoices(req.user),
     defaultPrivacy: process.env.YOUTUBE_DEFAULT_PRIVACY || 'public',
     error: req.query.error,
     notice: req.query.notice,
@@ -59,7 +72,10 @@ router.get('/videos', requireAuth, (req, res) => {
 // AI metadata. Body: { project_id } or { manual_context }.
 router.post('/videos/generate-meta', requireAuth, express.json(), async (req, res) => {
   try {
-    const project = req.body.project_id ? getProject(Number(req.body.project_id)) : null;
+    const project = projectForUser(req.body.project_id, req.user);
+    if (req.body.project_id && !project) {
+      return res.status(403).json({ error: 'You can only use your own projects.' });
+    }
     const meta = await generateVideoMeta({ project, manualContext: req.body.manual_context });
     res.json(meta);
   } catch (err) {
@@ -75,6 +91,10 @@ router.post('/videos/upload', requireAuth, upload.single('video'), async (req, r
     if (!file) throw new Error('No video file was attached.');
     const title = (req.body.title || '').trim();
     if (!title) throw new Error('Title is required.');
+    // Check the attach target before spending minutes on the upload.
+    if (req.body.project_id && !projectForUser(req.body.project_id, req.user)) {
+      throw new Error('You can only attach videos to your own projects.');
+    }
 
     const tags = (req.body.tags || '')
       .split(',')
@@ -98,7 +118,7 @@ router.post('/videos/upload', requireAuth, upload.single('video'), async (req, r
     let republished = false;
     const projectId = Number(req.body.project_id) || null;
     if (projectId) {
-      const project = getProject(projectId);
+      const project = projectForUser(projectId, req.user);
       if (project) {
         updateDraft(projectId, { video_url: url });
         attached = project;

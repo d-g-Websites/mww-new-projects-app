@@ -1,0 +1,14 @@
+<div class="card" style="text-align:center;padding:28px 18px;border-color:#ffcc80;background:#fff8e1;">
+  <div style="font-size:40px;line-height:1;margin-bottom:10px;">⛔</div>
+  <h2 style="margin:0 0 8px;font-size:20px;color:#7a4400;">{{quota.used}} project{{#unless (eq quota.used 1)}}s{{/unless}} submitted today — daily max reached</h2>
+  <p style="margin:0;font-size:15px;color:#7a4400;line-height:1.6;">
+    The limit is {{quota.limit}} per day. You can submit again tomorrow.
+  </p>
+  {{#if project}}
+  <p style="margin:14px 0 0;font-size:14px;color:#7a4400;line-height:1.6;">
+    <strong>Nothing was lost:</strong> {{project.service_label}} — {{project.city_name}}, IL is saved in your drafts. Open it tomorrow and tap <em>Save &amp; submit for approval</em>.
+  </p>
+  {{/if}}
+</div>
+
+<a class="btn btn-block" href="/" style="text-align:center;">Back to dashboard</a>

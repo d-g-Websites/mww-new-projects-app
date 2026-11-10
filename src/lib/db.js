@@ -93,6 +93,7 @@ ensureColumn('faq', 'TEXT');           // JSON array of {q, a} pairs for FAQPage
 ensureColumn('submitted_by', 'INTEGER'); // FK to users.id — who entered this project
 ensureColumn('pay_status', "TEXT DEFAULT 'unpaid'"); // 'unpaid' | 'paid' — tech compensation for the submission
 ensureColumn('pay_amount', 'REAL');      // dollars owed/paid for this submission
+ensureColumn('submitted_at', 'TEXT');    // UTC time the project was first sent for approval (daily limit)
 
 export function insertDraft(row) {
   // extras can come in as a plain object — JSON-stringify here so callers
@@ -169,9 +170,23 @@ export function getProjectBySlug(slug) {
 export function markPending(id) {
   db.prepare(`
     UPDATE projects
-       SET status = 'pending'
+       SET status = 'pending',
+           submitted_at = COALESCE(submitted_at, datetime('now'))
      WHERE id = ?
   `).run(id);
+}
+
+// How many projects credited to this user were sent for approval
+// (pending or published) at or after `sinceUtc` ('YYYY-MM-DD HH:MM:SS',
+// UTC — the same format SQLite's datetime('now') writes). Rows from
+// before submitted_at existed fall back to created_at.
+export function countSubmittedSince(userId, sinceUtc) {
+  return db.prepare(`
+    SELECT COUNT(*) AS n FROM projects
+     WHERE submitted_by = ?
+       AND status != 'draft'
+       AND COALESCE(submitted_at, created_at) >= ?
+  `).get(userId, sinceUtc).n;
 }
 
 export function markPublished(id) {

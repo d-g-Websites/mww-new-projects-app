@@ -7,6 +7,7 @@ import { SERVICES, getService, getHub, buildSlug, isSlugAvailable, resolveCityFr
 import { insertDraft, updateDraft, getProject, listPublished, countPublished, listPending, listDrafts, markPending, deleteProject, listUsers, listRecentActivity } from '../lib/db.js';
 import { notifyNewProject } from '../lib/telegram.js';
 import { recordTechUpdate } from '../lib/project-updates.js';
+import { submissionQuota } from '../lib/daily-limit.js';
 
 // Placeholder text shown when Claude narrative generation fails, so
 // the tech can spot it immediately on the preview page and either
@@ -116,6 +117,7 @@ router.get('/', (req, res) => {
 
   res.render('index', {
     drafts, pending, recent,
+    quota: submissionQuota(req.user),
     activity: isAdmin ? listRecentActivity({ limit: 10 }) : [],
     payFilter,
     techFilter,
@@ -180,7 +182,9 @@ router.get('/pay-structure', (req, res) => {
 
 // ── Step 1 of new-project flow: pick a service. ──
 router.get('/new', (req, res) => {
-  res.render('pick-service', { services: SERVICES });
+  const quota = submissionQuota(req.user);
+  if (quota?.reached) return res.render('limit-reached', { quota });
+  res.render('pick-service', { services: SERVICES, quota });
 });
 
 // Maps service.value → the Details-section partial to render. Services
@@ -282,6 +286,8 @@ function postAsContext(user) {
 router.get('/new/details', (req, res) => {
   const service = getService(req.query.service);
   if (!service) return res.redirect('/new');
+  const quota = submissionQuota(req.user);
+  if (quota?.reached) return res.render('limit-reached', { quota });
   res.render('new-project', {
     service,
     detailsPartial: DETAILS_PARTIALS[service.value] || 'details-generic',
@@ -825,6 +831,12 @@ router.post('/projects/:id/save', async (req, res, next) => {
       return res.status(409).render('error', { message: 'This project is already published.' });
     }
     if (!canTouch(req, p)) return res.status(403).render('error', { message: NOT_YOURS });
+    // Daily cap — only a draft becoming a new submission counts.
+    // The draft stays put so the tech can submit it tomorrow.
+    if (p.status === 'draft') {
+      const quota = submissionQuota(req.user);
+      if (quota?.reached) return res.render('limit-reached', { quota, project: p });
+    }
     markPending(p.id);
     // Fire-and-forget the Telegram ping so a flaky Telegram doesn't
     // block the tech from finishing the submission. Skip the ping

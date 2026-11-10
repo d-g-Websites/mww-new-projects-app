@@ -3,6 +3,22 @@
   <a class="btn" href="/users/new">+ Add user</a>
 </div>
 
+{{#if notice}}<div class="alert alert-success">{{notice}}</div>{{/if}}
+
+<div class="card">
+  <h2>Daily submission limit</h2>
+  <p class="muted" style="margin:-8px 0 12px;">Max projects each tech can send for approval per day (resets at midnight Chicago time). Drafts don't count. Leave blank for no limit. Admins are never limited.</p>
+  <form method="post" action="/users/daily-limit" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0;">
+    <input name="limit" type="number" min="1" step="1" inputmode="numeric" value="{{dailyLimit}}" placeholder="No limit"
+           style="width:120px;">
+    <span style="font-size:14px;color:#475569;">projects per tech per day</span>
+    <button type="submit" class="btn" style="padding:10px 18px;font-size:14px;">Save</button>
+  </form>
+  <p style="margin:10px 0 0;font-size:13px;color:#475569;">
+    Currently: <strong>{{#if dailyLimit}}{{dailyLimit}} per day{{else}}no limit{{/if}}</strong>
+  </p>
+</div>
+
 <div class="card">
   {{#if users.length}}
   <ul class="list">
@@ -20,7 +36,7 @@
       <div style="flex:1;min-width:0;">
         <strong>{{display_name}}</strong>
         <span class="muted" style="margin-left:8px;font-size:12px;background:#e0e8f0;color:#133047;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.3px;">{{role}}</span>
-        <div class="muted" style="font-size:13px;">@{{username}}</div>
+        <div class="muted" style="font-size:13px;">@{{username}}{{#if (eq role "tech")}} · {{todayCount}} submitted today{{#if atLimit}} <span style="color:#c62828;font-weight:700;">· max reached</span>{{/if}}{{/if}}</div>
       </div>
       <a class="btn btn-outline" href="/users/{{id}}/edit" style="padding:8px 14px;font-size:14px;">Edit</a>
     </li>

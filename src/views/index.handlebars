@@ -1,7 +1,17 @@
 <div class="card">
   <h2>Submit a completed job</h2>
   <p class="muted">Photos, address, customer review. Takes about 2 minutes.</p>
+  {{#if quota.reached}}
+  <div style="background:#fff8e1;border:1px solid #ffcc80;color:#7a4400;border-radius:8px;padding:14px;text-align:center;font-size:15px;">
+    <strong>{{quota.used}} project{{#unless (eq quota.used 1)}}s{{/unless}} submitted today — daily max reached.</strong><br>
+    <span style="font-size:13px;">You can submit again tomorrow.</span>
+  </div>
+  {{else}}
   <a class="btn btn-block" href="/new" style="text-align:center;">+ New project</a>
+  {{#if quota}}
+  <p class="muted" style="margin:8px 0 0;text-align:center;font-size:13px;">{{quota.used}} of {{quota.limit}} submitted today · {{quota.remaining}} left</p>
+  {{/if}}
+  {{/if}}
   <a class="btn btn-outline btn-block" href="/videos" style="text-align:center;margin-top:10px;">🎬 Upload a video to YouTube</a>
   <a class="btn btn-outline btn-block" href="/review-qr" style="text-align:center;margin-top:10px;">⭐ Ask for a Google review</a>
 </div>

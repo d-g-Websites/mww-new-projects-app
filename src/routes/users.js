@@ -12,6 +12,8 @@ import {
   createUser, updateUser, deleteUser,
 } from '../lib/db.js';
 import { hashPassword } from '../lib/auth.js';
+import { getDailyLimit, setDailyLimit, submissionQuota, dayStartUtc } from '../lib/daily-limit.js';
+import { countSubmittedSince } from '../lib/db.js';
 import { resizeAvatar } from '../lib/photos.js';
 import { commitAndPush, syncSiteRepo } from '../lib/git.js';
 
@@ -34,7 +36,27 @@ router.use('/users', requireAuth, requireAdmin);
 const usernameRe = /^[a-z][a-z0-9_-]{1,30}$/;
 
 router.get('/users', (req, res) => {
-  res.render('users-list', { users: listUsers() });
+  const since = dayStartUtc();
+  const users = listUsers().map(u => ({
+    ...u,
+    // Today's submissions for techs, shown next to their name.
+    todayCount: u.role === 'admin' ? null : countSubmittedSince(u.id, since),
+    atLimit: Boolean(submissionQuota(u)?.reached),
+  }));
+  res.render('users-list', {
+    users,
+    dailyLimit: getDailyLimit(),
+    notice: req.query.notice,
+  });
+});
+
+// Daily submission limit — one number for every tech. Registered
+// before /users/:id so "daily-limit" isn't read as a user id.
+router.post('/users/daily-limit', (req, res) => {
+  setDailyLimit(req.body.limit);
+  const n = getDailyLimit();
+  const msg = n ? `Daily limit set to ${n} project${n === 1 ? '' : 's'} per tech.` : 'Daily limit removed — techs can submit any number per day.';
+  res.redirect('/users?notice=' + encodeURIComponent(msg));
 });
 
 router.get('/users/new', (req, res) => {

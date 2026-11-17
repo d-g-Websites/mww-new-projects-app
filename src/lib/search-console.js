@@ -126,6 +126,8 @@ async function api(url, { method = 'GET', body } = {}) {
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
+    // One stuck request must not freeze a whole refresh.
+    signal: AbortSignal.timeout(30000),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

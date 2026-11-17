@@ -39,6 +39,7 @@ const STATE_KEY = 'gsc_sync_state';
 const WINDOW_DAYS = 90;
 const REINSPECT_DAYS = 7;
 const MAX_INSPECTIONS_PER_RUN = Number(process.env.GSC_MAX_INSPECTIONS_PER_RUN || 300);
+const INSPECT_WORKERS = 4;
 
 // ── Sync state (shown on the report page) ────────────────────────────
 
@@ -138,17 +139,23 @@ export async function syncPerformance({ reason = 'manual', now = new Date() } = 
     }
   })();
 
-  // 2. URL Inspection — never-checked pages first, then the stalest.
+  // 2. URL Inspection. Order matters when there are more pages than
+  //    one run can check: never-checked pages first, and among those
+  //    the ones with the fewest impressions (the likeliest to be out
+  //    of Google's index), oldest first; then the stalest re-checks.
   const due = db.prepare(`
     SELECT p.id, p.slug
       FROM projects p
       LEFT JOIN page_metrics m ON m.project_id = p.id
      WHERE p.status = 'published'
        AND (m.inspected_at IS NULL OR m.inspected_at < datetime('now', ?))
-     ORDER BY m.inspected_at IS NOT NULL, m.inspected_at
+     ORDER BY m.inspected_at IS NOT NULL,
+              CASE WHEN m.inspected_at IS NULL THEN COALESCE(m.impressions, 0) END,
+              m.inspected_at,
+              p.published_at
      LIMIT ?
   `).all(`-${REINSPECT_DAYS} days`, MAX_INSPECTIONS_PER_RUN);
-  saveSyncState({ toInspect: due.length });
+  saveSyncState({ toInspect: due.length, inspected: 0 });
 
   const saveInspection = db.prepare(`
     UPDATE page_metrics SET
@@ -161,21 +168,32 @@ export async function syncPerformance({ reason = 'manual', now = new Date() } = 
     UPDATE page_metrics SET inspect_error = ?, inspected_at = datetime('now') WHERE project_id = ?
   `);
 
+  // A few checks at a time: each takes ~1-3s at Google, and 4 workers
+  // stay far under the 600 checks/minute limit.
   let inspected = 0;
   let note = null;
-  for (const p of due) {
-    try {
-      const r = await inspectUrl(siteUrl, inspectionUrlFor(siteUrl, p.slug));
-      saveInspection.run({ id: p.id, ...r });
-    } catch (err) {
-      if (err.quota) { note = 'Google\'s daily page-check limit was reached; the rest will be checked on the next refresh.'; break; }
-      saveInspectError.run(err.message, p.id);
+  let stop = false;
+  const queue = [...due];
+  const worker = async () => {
+    while (!stop && queue.length) {
+      const p = queue.shift();
+      try {
+        const r = await inspectUrl(siteUrl, inspectionUrlFor(siteUrl, p.slug));
+        saveInspection.run({ id: p.id, ...r });
+      } catch (err) {
+        if (err.quota) {
+          stop = true;
+          note = 'Google\'s daily page-check limit was reached; the rest will be checked on the next refresh.';
+          return;
+        }
+        saveInspectError.run(err.message, p.id);
+      }
+      inspected += 1;
+      saveSyncState({ inspected });
+      await new Promise(r => setTimeout(r, 100));
     }
-    inspected += 1;
-    if (inspected % 10 === 0) saveSyncState({ inspected });
-    // Stay well under Google's 600 checks/minute limit.
-    await new Promise(r => setTimeout(r, 150));
-  }
+  };
+  await Promise.all(Array.from({ length: INSPECT_WORKERS }, worker));
   if (!note && due.length === MAX_INSPECTIONS_PER_RUN) {
     note = `Checked ${inspected} pages this run; the rest will be checked on the next refresh.`;
   }
@@ -278,5 +296,6 @@ export function buildReport({ minAgeDays = 30 } = {}) {
   const summary = Object.entries(CATEGORIES)
     .map(([key, c]) => ({ key, label: c.label, tone: c.tone, count: counts[key] || 0 }));
 
-  return { rows: judged, tooNew, summary, total: rows.length };
+  const indexChecked = rows.filter(r => r.index_verdict).length;
+  return { rows: judged, tooNew, summary, total: rows.length, indexChecked };
 }

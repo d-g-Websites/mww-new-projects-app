@@ -69,7 +69,10 @@
     <span class="perf-pill perf-{{tone}}">{{label}}: <strong>{{count}}</strong></span>
     {{/each}}
   </div>
-  <p class="muted" style="margin:10px 0 0;font-size:12px;">Pages published in the last {{minAgeDays}} days aren't judged yet — Google needs time to find and rank new pages.</p>
+  <p style="margin:10px 0 0;font-size:13px;color:#475569;">
+    Google index checked for <strong>{{indexChecked}} of {{total}}</strong> published pages{{#unless indexAllChecked}} — Google allows a limited number of checks per run, so the rest are checked over the next daily refreshes. Until a page is checked, it can't show up as "Not indexed".{{/unless}}
+  </p>
+  <p class="muted" style="margin:6px 0 0;font-size:12px;">Pages published in the last {{minAgeDays}} days aren't judged yet — Google needs time to find and rank new pages.</p>
 </div>
 
 {{#if rows.length}}

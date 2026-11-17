@@ -55,6 +55,8 @@ router.get('/performance', async (req, res, next) => {
       rows,
       tooNew: report.tooNew,
       total: report.total,
+      indexChecked: report.indexChecked,
+      indexAllChecked: report.indexChecked >= report.total,
       minAgeDays,
       ageChoices: AGE_CHOICES.map(n => ({ n, selected: n === minAgeDays })),
       view,
@@ -79,8 +81,10 @@ router.post('/performance/site', async (req, res) => {
     const sites = await gsc.listSites();
     if (!sites.includes(req.body.site)) throw new Error('That property isn\'t available to the connected Google account.');
     gsc.setSiteUrl(req.body.site);
-    startSync({ reason: 'property changed' });
-    res.redirect('/performance?notice=' + encodeURIComponent(`Switched to ${req.body.site}. Refreshing data…`));
+    const started = startSync({ reason: 'property changed' });
+    res.redirect('/performance?notice=' + encodeURIComponent(started
+      ? `Switched to ${req.body.site}. Refreshing data — reload in a few minutes.`
+      : `Switched to ${req.body.site}. A refresh is already running; the new property is used from the next refresh.`));
   } catch (err) {
     res.redirect('/performance?error=' + encodeURIComponent(err.message));
   }

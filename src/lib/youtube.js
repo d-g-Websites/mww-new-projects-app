@@ -16,9 +16,20 @@ import { getSetting, setSetting, deleteSetting } from './db.js';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const AUTH_URL  = 'https://accounts.google.com/o/oauth2/v2/auth';
 const UPLOAD_URL = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
-const SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
+// youtube.force-ssl = manage the channel's videos. Covers uploads AND
+// deletes (youtube.upload alone can't delete). Connections made before
+// this change only hold youtube.upload until an admin reconnects.
+const SCOPE = 'https://www.googleapis.com/auth/youtube.force-ssl';
+const DELETE_SCOPES = [
+  'https://www.googleapis.com/auth/youtube.force-ssl',
+  'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtubepartner',
+];
 
 const SETTING_KEY = 'youtube_refresh_token';
+// Space-separated scopes Google actually granted, from the latest token
+// response — tells us whether delete is allowed without a test call.
+const SCOPES_KEY = 'youtube_granted_scopes';
 
 function clientId()     { return process.env.YOUTUBE_CLIENT_ID; }
 function clientSecret() { return process.env.YOUTUBE_CLIENT_SECRET; }
@@ -37,7 +48,12 @@ export function isConnected() {
 
 export function disconnect() {
   deleteSetting(SETTING_KEY);
+  deleteSetting(SCOPES_KEY);
   cachedAccess = null;
+}
+
+function rememberScopes(data) {
+  if (data && typeof data.scope === 'string') setSetting(SCOPES_KEY, data.scope);
 }
 
 // Step 1 of the connect flow: where to send the admin's browser.
@@ -77,6 +93,7 @@ export async function exchangeCode(code) {
     throw new Error('Google did not return a refresh token. Remove the app at https://myaccount.google.com/permissions and connect again.');
   }
   setSetting(SETTING_KEY, data.refresh_token);
+  rememberScopes(data);
   cachedAccess = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
 }
 
@@ -104,8 +121,66 @@ async function getAccessToken() {
     if (data.error === 'invalid_grant') disconnect();
     throw new Error(`YouTube token refresh failed: ${data.error_description || data.error || res.status}`);
   }
+  rememberScopes(data);
   cachedAccess = { token: data.access_token, expiresAt: Date.now() + (data.expires_in - 60) * 1000 };
   return cachedAccess.token;
+}
+
+// Whether the stored connection is allowed to delete videos. Unknown
+// scopes (connection predates this code) trigger one token refresh,
+// whose response says what was granted.
+export async function canDeleteVideos() {
+  if (!isConnected()) return false;
+  if (!getSetting(SCOPES_KEY)) {
+    try { cachedAccess = null; await getAccessToken(); } catch { return false; }
+  }
+  const granted = (getSetting(SCOPES_KEY) || '').split(/\s+/);
+  return DELETE_SCOPES.some(s => granted.includes(s));
+}
+
+// Pull the 11-character video id out of any common YouTube URL shape:
+// watch?v=, youtu.be/, /shorts/, /embed/, /live/. Null for non-YouTube
+// (e.g. Vimeo) or unrecognized URLs.
+export function youtubeIdFromUrl(url) {
+  if (!url) return null;
+  let u;
+  try { u = new URL(String(url).trim()); } catch { return null; }
+  const host = u.hostname.replace(/^www\.|^m\./, '');
+  let id = null;
+  if (host === 'youtu.be') id = u.pathname.split('/')[1];
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    id = u.searchParams.get('v')
+      || (u.pathname.match(/^\/(?:shorts|embed|live|v)\/([^/?#]+)/) || [])[1];
+  }
+  return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+}
+
+// Permanently delete a video from the connected channel. Never throws;
+// returns { ok, alreadyGone?, error? }. A video already missing on
+// YouTube counts as success so callers can still clean up the project.
+export async function deleteVideo(videoId) {
+  let accessToken;
+  try { accessToken = await getAccessToken(); }
+  catch (err) { return { ok: false, error: err.message }; }
+  try {
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(videoId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.status === 204) return { ok: true };
+    if (res.status === 404) return { ok: true, alreadyGone: true };
+    const body = await res.json().catch(() => ({}));
+    const reason = body?.error?.errors?.[0]?.reason || body?.error?.status || '';
+    if (res.status === 403 && /insufficient/i.test(reason + ' ' + (body?.error?.message || ''))) {
+      return { ok: false, error: 'The YouTube connection only has upload permission. An admin needs to disconnect and reconnect YouTube on the Videos page to allow deleting.' };
+    }
+    if (res.status === 403) {
+      return { ok: false, error: 'YouTube refused to delete this video — it may not belong to the connected company channel.' };
+    }
+    return { ok: false, error: `YouTube delete failed (${res.status}): ${body?.error?.message || 'unknown error'}` };
+  } catch (err) {
+    return { ok: false, error: `YouTube delete failed: ${err.message}` };
+  }
 }
 
 // Resumable upload: open the session (metadata first), then PUT the

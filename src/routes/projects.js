@@ -8,6 +8,8 @@ import { insertDraft, updateDraft, getProject, listPublished, countPublished, li
 import { notifyNewProject } from '../lib/telegram.js';
 import { recordTechUpdate } from '../lib/project-updates.js';
 import { submissionQuota } from '../lib/daily-limit.js';
+import { youtubeIdFromUrl, canDeleteVideos, isConnected as youtubeConnected } from '../lib/youtube.js';
+import { deleteProjectVideo } from '../lib/project-video.js';
 
 // Placeholder text shown when Claude narrative generation fails, so
 // the tech can spot it immediately on the preview page and either
@@ -92,6 +94,7 @@ router.get('/', (req, res) => {
     // set one, otherwise the tier suggestion.
     pay_amount_display: p.pay_amount != null ? p.pay_amount : suggestedPay(p),
     pay_amount_is_suggested: p.pay_amount == null,
+    has_youtube_video: Boolean(youtubeIdFromUrl(p.video_url)),
   }));
 
   // Query-string fragment (minus page) so pagination links + the pay
@@ -713,15 +716,21 @@ router.get('/projects/:id/preview/iframe', (req, res) => {
 // fields. POST runs republishProject() which rewrites the project
 // HTML + relevant archives + sitemap, then commits + pushes. Locked
 // fields (slug, service, city, date) require delete+recreate.
-router.get('/projects/:id/edit', requireAdmin, (req, res) => {
+router.get('/projects/:id/edit', requireAdmin, async (req, res) => {
   const p = getProject(Number(req.params.id));
   if (!p) return res.status(404).render('error', { message: 'Project not found.' });
   if (p.status !== 'published') {
     return res.redirect(`/projects/${p.id}/preview`);
   }
   const galleryCount = Array.isArray(p.extra_photos) ? p.extra_photos.length : 0;
+  const hasYoutubeVideo = Boolean(youtubeIdFromUrl(p.video_url));
   res.render('edit-project', {
     project: p,
+    hasYoutubeVideo,
+    // Only check the YouTube permission when there's something to delete.
+    youtubeCanDelete: hasYoutubeVideo ? await canDeleteVideos() : false,
+    youtubeConnected: youtubeConnected(),
+    notice: req.query.notice,
     formValues: p,
     challengeChoices: CHALLENGE_CHOICES[p.service] || [],
     // Existing gallery photos (live URLs) + how many of the 5 slots
@@ -876,6 +885,38 @@ router.post('/projects/:id/publish', requireAdmin, async (req, res, next) => {
 //                         tile + footer link, remove sitemap entry,
 //                         regenerate archives (deleting empty ones),
 //                         commit + push.
+// ── Admin: delete a project's video from YouTube ─────────────────────
+// Deletes the video from the company channel, removes it from the
+// project, and re-publishes the page so no broken player is left.
+router.post('/projects/:id/video/delete', requireAdmin, async (req, res, next) => {
+  try {
+    const p = getProject(Number(req.params.id));
+    if (!p) return res.status(404).render('error', { message: 'Project not found.' });
+    const back = p.status === 'published' ? `/projects/${p.id}/edit` : `/projects/${p.id}/preview`;
+
+    const outcome = await deleteProjectVideo(p);
+    if (outcome.status === 'none' || outcome.status === 'not-youtube') {
+      return res.status(400).render('error', { message: 'This project has no YouTube video to delete.' });
+    }
+    if (outcome.status === 'failed') {
+      return res.status(502).render('error', { message: outcome.error });
+    }
+
+    // Removed from YouTube (or deliberately kept because another project
+    // uses it) — either way, take it off this project's page.
+    updateDraft(p.id, { video_url: null });
+    if (p.status === 'published') await republishProject(getProject(p.id));
+
+    const msg =
+        outcome.status === 'deleted'      ? 'Video deleted from YouTube and removed from this project.'
+      : outcome.status === 'already-gone' ? 'The video was already gone from YouTube — removed it from this project.'
+      : `Removed the video from this project. It was NOT deleted from YouTube because it's also used by: ${outcome.others.join('; ')}.`;
+    res.redirect(`${back}?notice=${encodeURIComponent(msg + (p.status === 'published' ? ' The live page updates in about a minute.' : ''))}`);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/projects/:id/delete', async (req, res, next) => {
   try {
     const p = getProject(Number(req.params.id));
@@ -886,7 +927,14 @@ router.post('/projects/:id/delete', async (req, res, next) => {
         return res.status(403).render('error', { message: 'Only admins can delete published projects.' });
       }
       const result = await unpublishProject(p);
-      return res.render('unpublished', { project: p, result });
+      // Take the YouTube video with it unless the admin unticked that.
+      // Runs after the page is gone, and never blocks the deletion.
+      const video = req.body.delete_video === '1'
+        ? await deleteProjectVideo(p).catch(err => ({ status: 'failed', url: p.video_url, error: err.message }))
+        : !p.video_url ? { status: 'none' }
+        : youtubeIdFromUrl(p.video_url) ? { status: 'kept', url: p.video_url }
+        : { status: 'not-youtube', url: p.video_url };
+      return res.render('unpublished', { project: p, result, video });
     }
 
     // Techs can only discard their own drafts / pending submissions.

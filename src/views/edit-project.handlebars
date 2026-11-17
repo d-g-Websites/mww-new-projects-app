@@ -4,6 +4,7 @@
 </div>
 <p class="muted" style="font-size:13px;">{{project.service_label}} — {{project.city_name}}, IL · Slug: <code>{{project.slug}}</code></p>
 <p class="muted" style="font-size:12px;">Published {{project.published_at}}. Slug / service / city / date are locked — to change them, delete and recreate.</p>
+{{#if notice}}<div class="alert alert-success">{{notice}}</div>{{/if}}
 
 <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;">
   <form method="post" action="/projects/{{project.id}}/regenerate-narrative" style="margin:0;">
@@ -92,7 +93,18 @@
     <div class="field">
       <label for="video_url">Video URL (YouTube or Vimeo)</label>
       <input id="video_url" name="video_url" type="url" value="{{project.video_url}}" placeholder="https://youtu.be/…">
+      <small>Clearing this box only removes the video from the page. To delete it from the YouTube channel too, use the button below.</small>
     </div>
+    {{#if hasYoutubeVideo}}
+    {{#if youtubeCanDelete}}
+    <button type="submit" form="delete-video-form" class="btn btn-outline btn-block"
+            style="color:#c62828;border-color:#ef9a9a;font-size:14px;">🗑 Delete video from YouTube</button>
+    {{else if youtubeConnected}}
+    <p style="margin:0;font-size:13px;color:#7a4400;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;">
+      To delete videos from YouTube here, reconnect YouTube once: <a href="/videos">Videos page</a> → <strong>Disconnect</strong> → <strong>Connect YouTube channel</strong> → pick <strong>My Window Washing</strong> → Allow.
+    </p>
+    {{/if}}
+    {{/if}}
   </div>
 
   <div class="card">
@@ -135,8 +147,19 @@
   <button type="submit" class="btn btn-block">Save changes &amp; update live site</button>
 </form>
 
+{{!-- Separate form so the Video card's button can submit it without
+     nesting forms (the button uses form="delete-video-form"). --}}
+<form id="delete-video-form" method="post" action="/projects/{{project.id}}/video/delete" style="display:none;"
+      onsubmit="return confirm('Permanently delete this video from the YouTube channel? It will also be removed from this project page. YouTube has no undo.');"></form>
+
 <form method="post" action="/projects/{{project.id}}/delete" style="margin-top:14px;"
-      onsubmit="return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row. It leaves the live site about a minute later. This cannot be undone — proceed?');">
+      onsubmit="var v=this.querySelector('[name=delete_video]'); return confirm('Delete this published project? This removes the live page, all its photos, the spoke-page tile, the sitemap entry, and the DB row' + (v && v.checked ? ', AND permanently deletes its video from YouTube' : '') + '. It leaves the live site about a minute later. This cannot be undone — proceed?');">
+  {{#if hasYoutubeVideo}}
+  <label class="check-row" style="margin-bottom:10px;">
+    <input type="checkbox" name="delete_video" value="1" checked>
+    <span>Also delete its video from YouTube{{#unless youtubeCanDelete}} <small style="color:#7a4400;">(needs the YouTube reconnect above — otherwise the video stays on YouTube)</small>{{/unless}}</span>
+  </label>
+  {{/if}}
   <button type="submit" class="btn btn-block" style="background:#c62828;color:#fff;border:none;">
     Delete project from website
   </button>

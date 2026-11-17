@@ -11,8 +11,24 @@
     <li>Sitemap entry removed</li>
     <li>{{result.archives.length}} archive page{{#unless (eq result.archives.length 1)}}s{{/unless}} regenerated</li>
     <li>DB row deleted</li>
+    {{#if (eq video.status "deleted")}}<li>YouTube video deleted from the channel</li>{{/if}}
+    {{#if (eq video.status "already-gone")}}<li>YouTube video was already gone from the channel</li>{{/if}}
+    {{#if (eq video.status "kept")}}<li>YouTube video left on the channel (you unticked "Also delete its video"): <a href="{{video.url}}" target="_blank" rel="noopener">{{video.url}}</a></li>{{/if}}
+    {{#if (eq video.status "not-youtube")}}<li>Video wasn't on YouTube (e.g. Vimeo) — nothing deleted there: <a href="{{video.url}}" target="_blank" rel="noopener">{{video.url}}</a></li>{{/if}}
   </ul>
 </div>
+
+{{#if (eq video.status "shared")}}
+<div class="alert" style="background:#fff8e1;border-color:#ffe082;color:#7a5400;">
+  <strong>Video kept on YouTube</strong> because it's also used by: {{#each video.others}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}.
+</div>
+{{/if}}
+{{#if (eq video.status "failed")}}
+<div class="alert">
+  <strong>The project was deleted, but its YouTube video was not.</strong> {{video.error}}<br>
+  Delete it by hand in YouTube Studio if you want it gone: <a href="{{video.url}}" target="_blank" rel="noopener">{{video.url}}</a>
+</div>
+{{/if}}
 
 <p style="font-size:14px;">The page leaves mywindowwashing.com about a minute later, once cPanel pulls the push.</p>
 

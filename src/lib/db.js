@@ -209,6 +209,16 @@ export function revertPublished(id, status, publishedAt) {
   `).run(status, publishedAt ?? null, id);
 }
 
+// Every project that has a video URL — used to make sure a YouTube
+// video isn't deleted while another project still embeds it.
+export function listProjectsWithVideo() {
+  return db.prepare(`
+    SELECT id, video_url, service_label, city_name, status
+      FROM projects
+     WHERE video_url IS NOT NULL AND video_url != ''
+  `).all();
+}
+
 export function deleteProject(id) {
   db.prepare('DELETE FROM projects WHERE id = ?').run(id);
 }

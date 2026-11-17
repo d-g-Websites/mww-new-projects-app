@@ -934,7 +934,7 @@ router.post('/projects/:id/delete', async (req, res, next) => {
         : !p.video_url ? { status: 'none' }
         : youtubeIdFromUrl(p.video_url) ? { status: 'kept', url: p.video_url }
         : { status: 'not-youtube', url: p.video_url };
-      return res.render('unpublished', { project: p, result, video });
+      return res.render('unpublished', { project: p, result, video, fromPerformance: req.body.from === 'performance' });
     }
 
     // Techs can only discard their own drafts / pending submissions.

@@ -11,6 +11,8 @@ import usersRouter from './routes/users.js';
 import videosRouter from './routes/videos.js';
 import socialRouter from './routes/social.js';
 import reviewQrRouter from './routes/review-qr.js';
+import performanceRouter from './routes/performance.js';
+import { scheduleDailySync } from './lib/performance.js';
 import { loadUser } from './middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -78,6 +80,7 @@ app.use('/', usersRouter);
 app.use('/', videosRouter);
 app.use('/', socialRouter);
 app.use('/', reviewQrRouter);
+app.use('/', performanceRouter);
 app.use('/', projectsRouter);
 
 // Global error handler — surfaces stack only in non-prod.
@@ -93,6 +96,9 @@ const port = Number(process.env.PORT || 3000);
 const server = app.listen(port, () => {
   console.log(`MWW dashboard listening on http://localhost:${port}`);
 });
+
+// Pull Search Console data for the performance report about once a day.
+scheduleDailySync();
 
 // Video uploads from a phone on cell signal can take a long time —
 // Node's default 5-minute requestTimeout would kill them mid-stream.

@@ -1,0 +1,162 @@
+<h2 style="margin:0 0 4px;">📉 Worst performing projects</h2>
+<p class="muted" style="margin:0 0 16px;">Published project pages ranked worst-first using Google Search Console: pages Google hasn't indexed, then pages never shown in search, then pages shown but never clicked. Use it to prune pages that aren't earning their place.</p>
+
+{{#if error}}<div class="alert">{{error}}</div>{{/if}}
+{{#if notice}}<div class="alert alert-success">{{notice}}</div>{{/if}}
+
+{{#unless connected}}
+<div class="card">
+  <h2>🔗 Connect Google Search Console</h2>
+  {{#if configured}}
+  <p style="font-size:14px;line-height:1.6;margin:0 0 10px;">One-time setup. The report reads search data for mywindowwashing.com from Search Console (read-only — the app can't change anything there).</p>
+  <ol style="font-size:13px;line-height:1.7;color:#475569;margin:0 0 14px;padding-left:20px;">
+    <li>In Google Cloud Console (the same project as YouTube): <strong>APIs &amp; Services → Library</strong> → enable <strong>Google Search Console API</strong>.</li>
+    <li>Same project: <strong>Google Auth Platform → Data Access → Add or remove scopes</strong> → add <code>…/auth/webmasters.readonly</code> → Save.</li>
+    <li>Click the button below and sign in with the Google account that owns mywindowwashing.com in Search Console — your personal Gmail, <strong>not</strong> the My Window Washing YouTube brand account.</li>
+  </ol>
+  <a class="btn btn-block" href="/search-console/connect" style="text-align:center;">Connect Search Console</a>
+  {{else}}
+  <p style="font-size:14px;margin:0;">Google sign-in isn't configured on the server (YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET in .env).</p>
+  {{/if}}
+</div>
+{{/unless}}
+
+{{#if connected}}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div style="font-size:13px;line-height:1.6;">
+      <strong style="color:#2e7d32;">● Connected</strong> · <code>{{siteUrl}}</code><br>
+      {{#if syncRunning}}
+      <span style="color:#7a5400;">⟳ Refreshing from Google… {{#if sync.toInspect}}checked {{sync.inspected}} of {{sync.toInspect}} pages.{{/if}} Reload to see progress.</span>
+      {{else if sync.finishedAt}}
+      <span class="muted">Data from the last 90 days · last refreshed {{lastRefreshed}} UTC · refreshes automatically daily</span>
+      {{else}}
+      <span class="muted">No data pulled yet.</span>
+      {{/if}}
+    </div>
+    <form method="post" action="/performance/refresh" style="margin:0;">
+      <button type="submit" class="btn btn-outline" style="padding:8px 14px;font-size:13px;" {{#if syncRunning}}disabled{{/if}}>⟳ Refresh now</button>
+    </form>
+  </div>
+  {{#if sync.error}}<p style="margin:10px 0 0;font-size:13px;color:#c62828;">Last refresh failed: {{sync.error}}</p>{{/if}}
+  {{#if sync.note}}<p style="margin:10px 0 0;font-size:13px;color:#7a5400;">{{sync.note}}</p>{{/if}}
+  {{#if sites.length}}
+  <form method="post" action="/performance/site" style="margin:10px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select name="site" style="width:auto;padding:7px 10px;font-size:13px;">
+      {{#each sites}}<option value="{{this}}" {{#if (eq this ../siteUrl)}}selected{{/if}}>{{this}}</option>{{/each}}
+    </select>
+    <button type="submit" class="btn btn-outline" style="padding:7px 12px;font-size:12px;">Use this property</button>
+  </form>
+  {{/if}}
+</div>
+
+{{#if neverSynced}}
+<div class="card"><p style="margin:0;font-size:14px;">No data yet — click <strong>⟳ Refresh now</strong> to pull it from Google.</p></div>
+{{else}}
+
+<div class="card">
+  <form method="get" action="/performance" id="perf-filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px;">
+    <select name="view" onchange="this.form.submit()" style="width:auto;padding:8px 10px;font-size:14px;">
+      <option value="worst" {{#if (eq view "worst")}}selected{{/if}}>Problem pages only</option>
+      <option value="all" {{#if (eq view "all")}}selected{{/if}}>All judged pages</option>
+    </select>
+    <select name="age" onchange="this.form.submit()" style="width:auto;padding:8px 10px;font-size:14px;">
+      {{#each ageChoices}}<option value="{{n}}" {{#if selected}}selected{{/if}}>Published {{n}}+ days ago</option>{{/each}}
+    </select>
+  </form>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {{#each summary}}
+    <span class="perf-pill perf-{{tone}}">{{label}}: <strong>{{count}}</strong></span>
+    {{/each}}
+  </div>
+  <p class="muted" style="margin:10px 0 0;font-size:12px;">Pages published in the last {{minAgeDays}} days aren't judged yet — Google needs time to find and rank new pages.</p>
+</div>
+
+{{#if rows.length}}
+{{#each rows}}
+<div class="card perf-card perf-border-{{tone}}">
+  <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+    <div style="min-width:0;flex:1;">
+      <span class="perf-pill perf-{{tone}}" style="font-size:11px;">{{categoryLabel}}</span>
+      <div style="margin-top:6px;"><strong>{{service_label}} — {{city_name}}, IL</strong></div>
+      <div class="muted" style="font-size:12px;">
+        <a href="https://www.mywindowwashing.com/projects/{{slug}}" target="_blank" rel="noopener">/{{slug}}</a>
+        · published {{age_days}} days ago{{#if submitted_by_name}} · by {{submitted_by_name}}{{/if}}
+      </div>
+    </div>
+  </div>
+
+  <div class="perf-stats">
+    <div><span>{{#if metrics_at}}{{impressions}}{{else}}—{{/if}}</span>impressions</div>
+    <div><span>{{#if metrics_at}}{{clicks}}{{else}}—{{/if}}</span>clicks</div>
+    <div><span>{{#if positionRounded}}{{positionRounded}}{{else}}—{{/if}}</span>avg position</div>
+    <div><span>{{#if impressions}}{{ctrPct}}%{{else}}—{{/if}}</span>click rate</div>
+  </div>
+
+  <div style="font-size:13px;color:#475569;margin:8px 0;">
+    <strong>Google index:</strong>
+    {{#if coverage_state}}{{coverage_state}}{{else if inspect_error}}<span style="color:#c62828;">check failed — {{inspect_error}}</span>{{else}}not checked yet{{/if}}
+    {{#if lastCrawlDate}}<span class="muted"> · last crawled {{lastCrawlDate}}</span>{{/if}}
+    {{#if inspection_link}} · <a href="{{inspection_link}}" target="_blank" rel="noopener">details in Search Console</a>{{/if}}
+  </div>
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+    <span class="muted" style="font-size:12px;align-self:center;">Page quality {{qualityScore}}/5:</span>
+    {{#each quality}}<span class="q-badge {{#if ok}}q-ok{{else}}q-miss{{/if}}">{{#if ok}}✓{{else}}✗{{/if}} {{label}}</span>{{/each}}
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="/projects/{{id}}/edit" style="padding:8px 14px;font-size:13px;">Edit / improve</a>
+    <form method="post" action="/projects/{{id}}/delete" style="margin:0;"
+          onsubmit="return confirm('Delete this project from the website{{#if has_youtube_video}} AND permanently delete its YouTube video{{/if}}? This removes the live page, photos, spoke-page tile, sitemap entry and DB row. Cannot be undone — proceed?');">
+      <input type="hidden" name="from" value="performance">
+      {{#if has_youtube_video}}<input type="hidden" name="delete_video" value="1">{{/if}}
+      <button type="submit" class="btn" style="padding:8px 14px;font-size:13px;background:#c62828;color:#fff;border:none;">Delete project{{#if has_youtube_video}} + video{{/if}}</button>
+    </form>
+  </div>
+</div>
+{{/each}}
+{{else}}
+<div class="card"><p style="margin:0;font-size:14px;">🎉 No problem pages in this view.</p></div>
+{{/if}}
+
+{{#if tooNew.length}}
+<details class="card">
+  <summary style="cursor:pointer;font-weight:700;">Too new to judge ({{tooNew.length}})</summary>
+  <ul class="list" style="margin-top:10px;">
+    {{#each tooNew}}
+    <li style="font-size:13px;">{{service_label}} — {{city_name}}, IL <span class="muted">· {{age_days}} days old · {{#if metrics_at}}{{impressions}} impressions, {{clicks}} clicks{{else}}no data yet{{/if}}</span></li>
+    {{/each}}
+  </ul>
+</details>
+{{/if}}
+
+{{/if}}
+
+<form method="post" action="/search-console/disconnect" style="margin:6px 0 0;text-align:right;"
+      onsubmit="return confirm('Disconnect Search Console? The report stops refreshing until you connect again.');">
+  <button type="submit" class="muted" style="background:none;border:none;font-size:12px;text-decoration:underline;cursor:pointer;">Disconnect Search Console</button>
+</form>
+{{/if}}
+
+<a class="btn btn-outline btn-block" href="/" style="text-align:center;margin-top:14px;">Back to dashboard</a>
+
+<style>
+.perf-pill { display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.perf-bad { background:#ffebee; color:#b71c1c; }
+.perf-warn { background:#fff8e1; color:#7a5400; }
+.perf-good { background:#e8f5e9; color:#1b5e20; }
+.perf-neutral { background:#eceff1; color:#455a64; }
+.perf-card { border-left-width:4px; }
+.perf-border-bad { border-left-color:#e57373; }
+.perf-border-warn { border-left-color:#ffb74d; }
+.perf-border-good { border-left-color:#81c784; }
+.perf-border-neutral { border-left-color:#b0bec5; }
+.perf-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0 4px; }
+.perf-stats div { background:#f5f8fa; border-radius:8px; padding:8px; text-align:center; font-size:11px; color:#8a9db0; }
+.perf-stats span { display:block; font-size:18px; font-weight:700; color:#133047; }
+.q-badge { font-size:11px; padding:2px 8px; border-radius:10px; }
+.q-ok { background:#e8f5e9; color:#2e7d32; }
+.q-miss { background:#fafafa; color:#9e9e9e; border:1px solid #eee; }
+@media (max-width:480px) { .perf-stats { grid-template-columns:repeat(2,1fr); } }
+</style>

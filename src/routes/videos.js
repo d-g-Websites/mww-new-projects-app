@@ -19,6 +19,8 @@ import { getProject, updateDraft, listDrafts, listPending, listPublished } from 
 import { isConfigured, isConnected, getAuthUrl, exchangeCode, disconnect, uploadVideo } from '../lib/youtube.js';
 import { generateVideoMeta } from '../lib/video-meta.js';
 import { recordTechUpdate } from '../lib/project-updates.js';
+import { handleGscCallback } from './performance.js';
+import { STATE_PREFIX as GSC_STATE_PREFIX } from '../lib/search-console.js';
 import { republishProject } from './publish.js';
 
 const router = Router();
@@ -158,6 +160,10 @@ router.get('/youtube/connect', requireAuth, requireAdmin, (req, res) => {
 });
 
 router.get('/youtube/callback', requireAuth, requireAdmin, async (req, res) => {
+  // Search Console sign-ins share this redirect URI; route them on.
+  if (String(req.query.state || '').startsWith(GSC_STATE_PREFIX)) {
+    return handleGscCallback(req, res);
+  }
   try {
     if (req.query.error) throw new Error(`Google returned: ${req.query.error}`);
     if (!req.query.code) throw new Error('No authorization code in callback.');

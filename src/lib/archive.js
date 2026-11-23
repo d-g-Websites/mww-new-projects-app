@@ -17,6 +17,7 @@ import {
 } from './db.js';
 import { SERVICES, getService, getCity, getHub } from './slug.js';
 import { serializeJsonLd } from './json-ld.js';
+import { fitArchiveTitle } from './seo-meta.js';
 
 const SITE_ROOT = 'https://www.mywindowwashing.com';
 
@@ -181,7 +182,7 @@ function buildView({ kind, focus, projects }) {
     cta: { heading: ctaHeading, sub: ctaSub },
     footerServiceLinks,
     seo: {
-      title,
+      title: fitArchiveTitle(title),
       description: intro,
       canonical: `${SITE_ROOT}${urlPath}`,
     },

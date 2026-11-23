@@ -57,7 +57,9 @@ export function updateSpokePage(siteRepoPath, citySlug, project, opts = {}) {
   // below the tile grid. Always present so older projects displaced
   // from the tile grid stay reachable, and so the per-spoke archive
   // gets an internal link from the spoke page itself.
-  const cityName = (project.city_name || resolveCityName(citySlug));
+  // Name the spoke, not the project's own city: an Arlington Heights job
+  // filed under the Prospect Heights spoke links to /projects/prospect-heights.
+  const cityName = resolveCityName(citySlug);
   const count    = opts.projectCount ?? 0;
   injectViewAllLink($, citySlug, cityName, count);
 

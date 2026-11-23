@@ -198,6 +198,28 @@ export function markPublished(id) {
   `).run(id);
 }
 
+// How many published projects share this one's service, street, city
+// and job date and went live before it. render.js uses it to keep page
+// titles unique when two jobs land on the same street the same day.
+export function countEarlierTwins(project) {
+  if (!project?.id) return 0;
+  const me = project.status === 'published' ? project.published_at : null;
+  return db.prepare(`
+    SELECT COUNT(*) AS n
+      FROM projects
+     WHERE status = 'published'
+       AND id != @id
+       AND service = @service
+       AND city_slug = @city_slug
+       AND COALESCE(street, '') = COALESCE(@street, '')
+       AND COALESCE(review_date, '') = COALESCE(@review_date, '')
+       AND (@me IS NULL OR published_at < @me OR (published_at = @me AND id < @id))
+  `).get({
+    id: project.id, service: project.service, city_slug: project.city_slug,
+    street: project.street ?? null, review_date: project.review_date ?? null, me,
+  }).n;
+}
+
 // Undo markPublished() when a publish fails partway, so the row goes
 // back to the queue instead of showing up in archive listings.
 export function revertPublished(id, status, publishedAt) {

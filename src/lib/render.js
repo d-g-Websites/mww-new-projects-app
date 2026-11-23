@@ -2,8 +2,9 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import Handlebars from 'handlebars';
 import { getService, getHub, getCity, findNearestCities } from './slug.js';
-import { relatedProjects, listPublished, getUser } from './db.js';
+import { relatedProjects, listPublished, getUser, countEarlierTwins } from './db.js';
 import { serializeJsonLd } from './json-ld.js';
+import { buildSeoTitle, buildSeoDescription } from './seo-meta.js';
 
 const TEMPLATE_PATH = join(process.cwd(), 'templates', 'project-page.hbs');
 let TEMPLATE_FN = null;
@@ -303,9 +304,16 @@ function buildView(project, opts = {}) {
   const beforeAfterSub = opts.beforeAfterSub
     || (project.challenge || `Showing the home's condition before our team arrived, and the result after the ${service.label.toLowerCase()} was complete.`);
 
-  const seoTitle = `${service.label} in ${city.name}, IL — ${dateLabel} Project | My Window Washing`;
-  const seoDescBase = `${service.label} at a ${homeType.toLowerCase()} in ${city.name}, IL. ${metricVal ? metricVal + ' ' + metricLab.toLowerCase() + '. ' : ''}Completed ${dateLabel} by My Window Washing.`;
-  const seoDesc = seoDescBase.length > 155 ? seoDescBase.slice(0, 152).trimEnd() + '...' : seoDescBase;
+  const twinsBefore = countEarlierTwins(project);
+  const seoTitle = buildSeoTitle({
+    serviceLabel: service.label, cityName: city.name,
+    street: project.street, date: project.review_date, twinsBefore,
+  });
+  const seoDesc = buildSeoDescription({
+    serviceLabel: service.label, homeType: homeType.toLowerCase(), cityName: city.name,
+    street: project.street, metric: metricVal ? `${metricVal} ${metricLab.toLowerCase()}` : '',
+    date: project.review_date, twinsBefore,
+  });
 
   // 3 related — fetched from DB if not provided. Pad with placeholders.
   const related = buildRelated(project);
